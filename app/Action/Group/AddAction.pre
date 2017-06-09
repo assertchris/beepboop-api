@@ -1,0 +1,35 @@
+<?php
+
+namespace Beepboop\Action\Group;
+
+use Beepboop\Action;
+
+use function Beepboop\prepare;
+
+class AddAction implements Action
+{
+    async public function run($parameters = null)
+    {
+        $parameters = <$parameters>;
+
+        $values = <
+            "name" => $parameters->name,
+            "technician_id" => $parameters->technician_id,
+            "administrator_id" => $parameters->administrator_id,
+            "created_at" => date("Y-m-d H:i:s"),
+        >;
+
+        $results = await prepare(
+            "INSERT INTO `groups` (`name`, `technician_id`, `administrator_id`, `created_at`) VALUES (:name, :technician_id, :administrator_id, :created_at)", $values
+        );
+
+        $results = await prepare(
+            "SELECT * FROM `groups` WHERE `id` = :id LIMIT 1",
+            <"id" => $results->insertId>
+        );
+
+        if ($row = await $results->fetchObject()) {
+            return <$row>;
+        }
+    }
+}

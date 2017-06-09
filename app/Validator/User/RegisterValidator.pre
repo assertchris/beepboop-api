@@ -1,0 +1,57 @@
+<?php
+
+namespace Beepboop\Validator\User;
+
+use Beepboop\Validator;
+use Beepboop\Validator\Validates;
+
+use function Beepboop\prepare;
+
+class RegisterValidator implements Validator
+{
+    use Validates;
+
+    async public function run($parameters = null)
+    {
+        $errors = <>;
+        $parameters = <$parameters>;
+
+        if ($parameters->name === null) {
+            $errors->name = "Name is required";
+        }
+
+        if ($parameters->address === null) {
+            $errors->address = "Address is required";
+        }
+
+        if ($parameters->phone === null) {
+            $errors->phone = "Phone is required";
+        }
+
+        if ($parameters->email === null) {
+            $errors->email = "Email is required";
+        }
+
+        if ($parameters->password === null) {
+            $errors->password = "Password is required";
+        } else if (strlen($parameters->password) < 8) {
+            $errors->password = "Password must be at least 8 characters";
+        }
+
+        if ($parameters->password_confirmation === null) {
+            $errors->password_confirmation = "Password confirmation is required";
+        } else if ($parameters->password !== $parameters->password_confirmation) {
+            $errors->password_confirmation = "Passwords must match";
+        }
+
+        if (!$errors->email) {
+            $result = await prepare("SELECT * FROM users WHERE email = :email LIMIT 1", $parameters);
+
+            if ($row = await $result->fetchObject()) {
+                $errors->email = "Email must be unique";
+            }
+        }
+
+        return $errors;
+    }
+}

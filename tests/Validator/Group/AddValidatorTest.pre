@@ -1,0 +1,44 @@
+<?php
+
+namespace Beepboop\Tests\Validator\Group;
+
+use Beepboop\Tests\InsertsGroup;
+use Beepboop\Tests\Test;
+use Beepboop\Validator\Group\AddValidator;
+
+use function Beepboop\prepare;
+
+class AddValidatorTest extends Test
+{
+    use InsertsGroup;
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\Group\AddValidator::run
+     */
+    public function can_detect_empty_required_fields()
+    {
+        $this->wait(() => {
+            $result = await AddValidator->new()->run();
+
+            $this->assertEquals("Name is required", $result->name);
+        });
+    }
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\Group\AddValidator::run
+     */
+    public function can_detect_duplicate_names()
+    {
+        $this->wait(() => {
+            await $this->insertGroup();
+
+            $result = await AddValidator->new()->run(<
+                "name" => "test"
+            >);
+
+            $this->assertEquals("Name must be unique", $result->name);
+        });
+    }
+}

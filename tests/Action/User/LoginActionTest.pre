@@ -1,0 +1,44 @@
+<?php
+
+namespace Beepboop\Tests\Action\User;
+
+use Beepboop\Tests\InsertsUser;
+use Beepboop\Tests\Test;
+use Beepboop\Action\User\LoginAction;
+
+use function Beepboop\hash;
+use function Beepboop\prepare;
+
+class LoginActionTest extends Test
+{
+    use InsertsUser;
+
+    /**
+     * @test
+     * @covers Beepboop\Action\User\LoginAction::run
+     */
+    public function can_detect_invalid_credentials()
+    {
+        $this->wait(() => {
+            await $this->insertUser(<
+                "password" => hash($this->data["password"]),
+            >);
+
+            $found = await LoginAction->new()->run(<
+                "email" => $this->data["email"],
+                "password" => $this->data["password"],
+            >);
+
+            $this->assertNotNull($found);
+            $this->assertNotNull($found->token);
+            $this->assertEquals($this->data["email"], $found->email);
+
+            $missing = await LoginAction->new()->run(<
+                "email" => $this->data["email"],
+                "password" => "wrong",
+            >);
+
+            $this->assertNull($missing);
+        });
+    }
+}

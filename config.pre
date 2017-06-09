@@ -1,0 +1,19 @@
+<?php
+
+if (getenv("BEEPBOOP_DISABLE_AUTOLOAD")) {
+    touch(__DIR__ . "/pre.lock");
+}
+
+use Aerys\Host;
+
+use function Aerys\root;
+use function Aerys\router;
+
+$host = Host->new();
+$host->expose("*", 8888);
+
+$host->use($router = router());
+$host->use($root = root(.."/public"));
+
+$api = process .."/routes.pre";
+$api($router);

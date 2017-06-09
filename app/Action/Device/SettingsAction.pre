@@ -1,0 +1,35 @@
+<?php
+
+namespace Beepboop\Action\Device;
+
+use Beepboop\Action;
+
+use function Beepboop\prepare;
+
+class SettingsAction implements Action
+{
+    async public function run($parameters = null)
+    {
+        $parameters = <$parameters>;
+
+        $findQuery = "SELECT * FROM `devices` WHERE `id` = :id AND `deleted_at` IS NULL LIMIT 1";
+        $updateQuery = "UPDATE `devices` SET `secondary_start_at` = :secondary_start_at, `secondary_duration` = :secondary_duration, `updated_at` = :updated_at WHERE `id` = :id LIMIT 1";
+
+        $seconds = $parameters->secondary_duration * 24 * 60 * 60;
+
+        await prepare($updateQuery, <
+            "id" => $parameters->id,
+            "secondary_start_at" => $parameters->secondary_start_at,
+            "secondary_duration" => $seconds,
+            "updated_at" => date("Y-m-d H:i:s"),
+        >);
+
+        $refreshResult = await prepare($findQuery, <
+            "id" => $parameters->id,
+        >);
+
+        if ($refreshRow = await $refreshResult->fetchObject()) {
+            return <$refreshRow>;
+        }
+    }
+}

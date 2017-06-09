@@ -1,0 +1,47 @@
+<?php
+
+namespace Beepboop\Action\Device;
+
+use Beepboop\Action;
+
+use function Beepboop\prepare;
+
+class EnsureAction implements Action
+{
+    async public function run($parameters = null)
+    {
+        $parameters = <$parameters>;
+
+        $findQuery = "SELECT * FROM `devices` WHERE `serial_number` = :serial_number AND `deleted_at` IS NULL LIMIT 1";
+        $updateQuery = "UPDATE `devices` SET `customer_id` = :customer_id, `group_id` = :group_id, `updated_at` = :updated_at WHERE `serial_number` = :serial_number LIMIT 1";
+        $insertQuery = "INSERT INTO `devices` (`serial_number`, `customer_id`, `group_id`, `created_at`) VALUES (:serial_number, :customer_id, :group_id, :created_at)";
+
+        $findResult = await prepare($findQuery, <
+            "serial_number" => $parameters->serial_number,
+        >);
+
+        if ($findRow = await $findResult->fetchObject()) {
+            await prepare($updateQuery, <
+                "serial_number" => $parameters->serial_number,
+                "customer_id" => empty($parameters->customer_id) ? null : $parameters->customer_id,
+                "group_id" => empty($parameters->group_id) ? null : $parameters->group_id,
+                "updated_at" => date("Y-m-d H:i:s"),
+            >);
+        } else {
+            await prepare($insertQuery, <
+                "serial_number" => $parameters->serial_number,
+                "customer_id" => empty($parameters->customer_id) ? null : $parameters->customer_id,
+                "group_id" => empty($parameters->group_id) ? null : $parameters->group_id,
+                "created_at" => date("Y-m-d H:i:s"),
+            >);
+        }
+
+        $refreshResult = await prepare($findQuery, <
+            "serial_number" => $parameters->serial_number,
+        >);
+
+        if ($refreshRow = await $refreshResult->fetchObject()) {
+            return <$refreshRow>;
+        }
+    }
+}

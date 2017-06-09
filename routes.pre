@@ -1,0 +1,75 @@
+<?php
+
+use Aerys\Router;
+use Beepboop\Responder\CorsResponder;
+use Beepboop\Responder\Device;
+use Beepboop\Responder\Group;
+use Beepboop\Responder\Invoice;
+use Beepboop\Responder\Me;
+use Beepboop\Responder\User;
+
+return (Router $router) => {
+    // device cors
+    $router->options("/device/ensure", CorsResponder->new()->route());
+    $router->options("/device/measurements/{id}", CorsResponder->new()->route());
+    $router->options("/device/settings/{id}", CorsResponder->new()->route());
+
+    // device routes
+    $router->put("/device/ensure", Device\EnsureResponder->new()->route());
+    $router->get("/device/measurements/{id}", Device\MeasurementsResponder->new()->route());
+    $router->put("/device/settings/{id}", Device\SettingsResponder->new()->route());
+
+    // group cors
+    $router->options("/group/add", CorsResponder->new()->route());
+    $router->options("/group/delete/{id}", CorsResponder->new()->route());
+    $router->options("/group/edit/{id}", CorsResponder->new()->route());
+    $router->options("/group/list", CorsResponder->new()->route());
+    $router->options("/group/view/{id}", CorsResponder->new()->route());
+
+    // group routes
+    $router->post("/group/add", Group\AddResponder->new()->route());
+    $router->delete("/group/delete/{id}", Group\DeleteResponder->new()->route());
+    $router->put("/group/edit/{id}", Group\EditResponder->new()->route());
+    $router->get("/group/list", Group\ListResponder->new()->route());
+    $router->get("/group/view/{id}", Group\ViewResponder->new()->route());
+
+    // invoice cors
+    $router->options("/invoice/download/{id}", CorsResponder->new()->route());
+    $router->options("/invoice/email/{id}", CorsResponder->new()->route());
+    $router->options("/invoice/generate/{id}", CorsResponder->new()->route());
+    $router->options("/invoice/list", CorsResponder->new()->route());
+
+    // invoice routes
+    $router->get("/invoice/download/{id}", Invoice\DownloadResponder->new()->route());
+    $router->post("/invoice/email/{id}", Invoice\EmailResponder->new()->route());
+    $router->post("/invoice/generate/{id}", Invoice\GenerateResponder->new()->route());
+    $router->get("/invoice/list", Invoice\ListResponder->new()->route());
+
+    // me cors
+    $router->options("/me/devices", CorsResponder->new()->route());
+    $router->options("/me/groups", CorsResponder->new()->route());
+    $router->options("/me/invoices", CorsResponder->new()->route());
+
+    // me routes
+    $router->get("/me/devices", Me\DevicesResponder->new()->route());
+    $router->get("/me/groups", Me\GroupsResponder->new()->route());
+    $router->get("/me/invoices", Me\InvoicesResponder->new()->route());
+
+    // user cors
+    $router->options("/user/add", CorsResponder->new()->route());
+    $router->options("/user/delete/{id}", CorsResponder->new()->route());
+    $router->options("/user/edit/{id}", CorsResponder->new()->route());
+    $router->options("/user/list", CorsResponder->new()->route());
+    $router->options("/user/login", CorsResponder->new()->route());
+    $router->options("/user/register", CorsResponder->new()->route());
+    $router->options("/user/view/{id}", CorsResponder->new()->route());
+
+    // user routes
+    $router->post("/user/add", User\AddResponder->new()->route());
+    $router->delete("/user/delete/{id}", User\DeleteResponder->new()->route());
+    $router->put("/user/edit/{id}", User\EditResponder->new()->route());
+    $router->get("/user/list", User\ListResponder->new()->route());
+    $router->post("/user/login", User\LoginResponder->new()->route());
+    $router->post("/user/register", User\RegisterResponder->new()->route());
+    $router->get("/user/view/{id}", User\ViewResponder->new()->route());
+};

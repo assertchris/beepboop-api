@@ -1,0 +1,59 @@
+<?php
+
+namespace Beepboop\Responder\Me;
+
+use Aerys\Request;
+use Aerys\Response;
+use Beepboop\Action\Me\GroupsAction;
+use Beepboop\Action\User\ListAction as UserListAction;
+use Beepboop\Responder;
+use Beepboop\Responder\Responds;
+
+class GroupsResponder implements Responder
+{
+    use Responds;
+
+    public function run(Request $request, Response $response, array $arguments = [])
+    {
+        if (await $this->auth($request, $response)) {
+            return;
+        }
+
+        $parameters = $request->getAllParams();
+        $parameters = <$parameters>->merge($arguments);
+
+        $parameters->user = $request->locals["beepboop.user"];
+
+        if (await $this->errors($parameters, $response)) {
+            return;
+        }
+
+        $users = await UserListAction->new()->run();
+
+        $groups = (await GroupsAction->new()->run($parameters))->map(($group) => {
+            unset($group->deleted_at);
+
+            foreach ($users as $user) {
+                if ($group->technician_id === $user->id) {
+                    $group->technician = $user->without(
+                        "deleted_at",
+                        "password",
+                        "token"
+                    );
+                }
+
+                if ($group->administrator_id === $user->id) {
+                    $group->administrator = $user->without(
+                        "deleted_at",
+                        "password",
+                        "token"
+                    );
+                }
+            }
+
+            return $group;
+        });
+
+        await $this->respond($response, 200, "ok", $groups);
+    }
+}

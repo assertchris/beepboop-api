@@ -1,0 +1,90 @@
+<?php
+
+namespace Beepboop\Tests;
+
+use Amp\Artax\Client;
+use Amp\Artax\Request;
+use Closure;
+use PHPUnit\Framework\TestCase;
+
+use function Amp\resolve;
+use function Amp\wait;
+use function Beepboop\prepare;
+use function Pre\addMacroPath;
+use function Pre\processAndRequire;
+
+abstract class Test extends TestCase
+{
+    protected function wait(Closure $async)
+    {
+        wait(resolve($async));
+    }
+
+    public function setUp()
+    {
+        parent::setUp();
+        $this->deleteTestUsers();
+        $this->deleteTestGroups();
+    }
+
+    private function deleteTestUsers()
+    {
+        $this->wait(() => {
+            await prepare(
+                "DELETE FROM users WHERE email = :email",
+                <"email" => "test@test.test">
+            );
+        });
+    }
+
+    private function deleteTestGroups()
+    {
+        $this->wait(() => {
+            await prepare(
+                "DELETE FROM groups WHERE name = :name",
+                <"name" => "test">
+            );
+        });
+    }
+
+    async protected function request(string $method, string $path, $data = [])
+    {
+        if (is_object($data)) {
+            $data = $data->toArray();
+        }
+
+        $host = getenv("TEST_HOST");
+        $port = getenv("TEST_PORT");
+        $data = http_build_query($data);
+
+        if ($method === "GET") {
+            $path .= "?{$data}";
+        }
+
+        $address = "http://{$host}:{$port}/{$path}";
+
+        $request = Request->new()
+            ->setMethod($method)
+            ->setUri($address);
+
+        if ($method === "POST") {
+            $request->setBody($data);
+        }
+
+        $client = Client->new();
+        $response = await $client->request($request);
+
+        return <
+            "status" => $response->getStatus(),
+            "reason" => $response->getReason(),
+            "body" => json_decode($response->getBody(), true),
+        >;
+    }
+
+    public function tearDown()
+    {
+        parent::tearDown();
+        $this->deleteTestUsers();
+        $this->deleteTestGroups();
+    }
+}

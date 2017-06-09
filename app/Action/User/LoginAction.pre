@@ -1,0 +1,36 @@
+<?php
+
+namespace Beepboop\Action\User;
+
+use Beepboop\Action;
+
+use function Beepboop\hash;
+use function Beepboop\verify;
+use function Beepboop\prepare;
+
+class LoginAction implements Action
+{
+    async public function run($parameters = null)
+    {
+        $parameters = <$parameters>;
+
+        $results = await prepare("SELECT * FROM `users` WHERE `email` = :email AND `deleted_at` IS NULL LIMIT 1", <
+            "email" => $parameters->email
+        >);
+
+        if ($row = await $results->fetchObject()) {
+            if (verify($parameters->password, $row->password)) {
+                $token = hash($parameters->email . time());
+
+                await prepare("UPDATE `users` SET `token` = :token WHERE `id` = :id LIMIT 1", <
+                    "token" => $token,
+                    "id" => $row->id
+                >);
+
+                $row->token = $token;
+
+                return <$row>;
+            }
+        }
+    }
+}

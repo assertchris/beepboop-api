@@ -1,0 +1,75 @@
+<?php
+
+namespace Beepboop\Tests\Validator\User;
+
+use Beepboop\Tests\InsertsUser;
+use Beepboop\Tests\Test;
+use Beepboop\Validator\User\ListValidator;
+
+use const Beepboop\USER_CUSTOMER;
+use const Beepboop\USER_GROUP_ADMINISTRATOR;
+use const Beepboop\USER_SYSTEM_ADMINISTRATOR;
+use const Beepboop\USER_TECHNICIAN;
+
+use function Beepboop\prepare;
+
+class ListValidatorTest extends Test
+{
+    use InsertsUser;
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\User\ListValidator::run
+     */
+    public function can_detect_system_admin_requests()
+    {
+        $this->wait(() => {
+            $user = await $this->insertUser();
+
+            $result = await ListValidator->new()->run(<
+                "user" => $user->with("type", USER_SYSTEM_ADMINISTRATOR),
+            >);
+
+            $this->assertNull($result->token);
+        });
+    }
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\User\ListValidator::run
+     */
+    public function can_detect_non_system_admin_requests()
+    {
+        $this->wait(() => {
+            $user = await $this->insertUser();
+            $error = "You don't have permission for this request";
+
+            $result = await ListValidator->new()->run(<
+                "user" => $user->with("type", USER_CUSTOMER),
+            >);
+
+            $this->assertEquals($error, $result->token);
+
+            $result = await ListValidator->new()->run(<
+                "user" => $user->with("type", USER_TECHNICIAN),
+            >);
+
+            $this->assertEquals($error, $result->token);
+
+            $result = await ListValidator->new()->run(<
+                "user" => $user->with("type", USER_GROUP_ADMINISTRATOR),
+            >);
+
+            $this->assertEquals($error, $result->token);
+        });
+    }
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\User\ListValidator::run
+     */
+    public function can_detect_technicians_or_group_administrators_with_permission()
+    {
+        $this->markTestSkipped();
+    }
+}

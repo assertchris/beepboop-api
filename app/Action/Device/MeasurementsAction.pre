@@ -1,0 +1,48 @@
+<?php
+
+namespace Beepboop\Action\Device;
+
+use Beepboop\Action;
+
+use function Beepboop\prepare;
+
+class MeasurementsAction implements Action
+{
+    async public function run($parameters = null)
+    {
+        $conditions = [];
+        $values = [];
+
+        if ($parameters->after !== null) {
+            $conditions[] = "DATE(`created_at`) >= :after";
+            $values["after"] = $parameters->after;
+        }
+
+        if ($parameters->before !== null) {
+            $conditions[] = "DATE(`created_at`) <= :before";
+            $values["before"] = $parameters->before;
+        }
+
+        $findResult = await prepare("SELECT * FROM `devices` WHERE `id` = :id LIMIT 1", <
+            "id" => $parameters->id,
+        >);
+
+        if ($findRow = await $findResult->fetchObject()) {
+            $append = "";
+
+            if (count($conditions)) {
+                $append = " AND " . join(" AND ", $conditions);
+            }
+
+            $measurementsResult = await prepare("SELECT * FROM `primary_measurements` WHERE `serial_number` = :serial_number {$append}", <
+                "serial_number" => $findRow->serial_number,
+            >->merge($values));
+
+            if ($measurementsRows = await $measurementsResult->fetchObjects()) {
+                return <$measurementsRows>;
+            }
+        }
+
+        return <>;
+    }
+}

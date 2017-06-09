@@ -1,0 +1,62 @@
+<?php
+
+namespace Beepboop\Responder\Invoice;
+
+use Aerys\Request;
+use Aerys\Response;
+use Beepboop\Action\Device\ViewAction as DeviceViewAction;
+use Beepboop\Action\Invoice\GenerateAction;
+use Beepboop\Action\Invoice\ViewAction as InvoiceViewAction;
+use Beepboop\Action\User\ViewAction as UserViewAction;
+use Beepboop\Responder;
+use Beepboop\Responder\Responds;
+
+use function Amp\File\get;
+
+class GenerateResponder implements Responder
+{
+    use Responds;
+
+    public function run(Request $request, Response $response, array $arguments = [])
+    {
+        $parameters = $request->getAllParams();
+        $parameters = <$parameters>->merge($arguments);
+
+        if (await $this->authToken($parameters->token[0], $request, $response)) {
+            return;
+        }
+
+        if (await $this->errors($parameters, $response)) {
+            return;
+        }
+
+        $invoice = await InvoiceViewAction->new()->run(<
+            "id" => $parameters->id,
+        >);
+
+        $device = await DeviceViewAction->new()->run(<
+            "id" => $invoice->device_id,
+        >);
+
+        $user = await UserViewAction->new()->run(<
+            "id" => $device->customer_id,
+        >);
+
+        $pdf = await GenerateAction->new()->run($parameters);
+
+        await $this->respond($response, 200, "ok", <
+            "invoice" => $invoice->without(
+                "deleted_at"
+            ),
+            "device" => $device->without(
+                "deleted_at"
+            ),
+            "user" => $user ? $user->without(
+                "deleted_at",
+                "password",
+                "token"
+            ) : null,
+            "pdf" => base64_encode($pdf),
+        >);
+    }
+}

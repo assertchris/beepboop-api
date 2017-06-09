@@ -1,0 +1,10 @@
+#!/usr/bin/env php
+<?php
+
+require_once __DIR__ . "/../bootstrap/tests.php";
+
+if (getenv("BEEPBOOP_TEST_COVERAGE")) {
+    passthru("BEEPBOOP_AVOID_REBUILD=1 " . BASE_PATH . "/vendor/bin/phpunit --coverage-html coverage");
+} else {
+    passthru("BEEPBOOP_AVOID_REBUILD=1 " . BASE_PATH . "/vendor/bin/phpunit");
+}

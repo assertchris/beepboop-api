@@ -1,0 +1,12 @@
+coverage
+vendor
+config.php
+helpers.php
+routes.php
+macros.php
+app/**/*.php
+tests/**/*.php
+scripts/*changes.php
+.env
+pre.paths
+aerys.log

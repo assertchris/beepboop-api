@@ -1,0 +1,38 @@
+<?php
+
+namespace Beepboop\Responder\Invoice;
+
+use Aerys\Request;
+use Aerys\Response;
+use Beepboop\Action\Invoice\EmailAction;
+use Beepboop\Responder;
+use Beepboop\Responder\Responds;
+
+use function Amp\File\get;
+
+class EmailResponder implements Responder
+{
+    use Responds;
+
+    public function run(Request $request, Response $response, array $arguments = [])
+    {
+        if (await $this->auth($request, $response)) {
+            return;
+        }
+
+        $parameters = await $this->parameters($request);
+        $parameters = $parameters->merge($arguments);
+
+        $parameters->user = $request->locals["beepboop.user"];
+
+        if (await $this->errors($parameters, $response)) {
+            return;
+        }
+
+        $result = await EmailAction->new()->run($parameters);
+
+        await $this->respond($response, 200, "ok", <
+            "response" => $result,
+        >);
+    }
+}

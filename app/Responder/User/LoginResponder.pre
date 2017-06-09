@@ -1,0 +1,34 @@
+<?php
+
+namespace Beepboop\Responder\User;
+
+use Aerys\Request;
+use Aerys\Response;
+use Beepboop\Action\User\LoginAction;
+use Beepboop\Responder;
+use Beepboop\Responder\Responds;
+
+class LoginResponder implements Responder
+{
+    use Responds;
+
+    public function run(Request $request, Response $response, array $arguments = [])
+    {
+        $parameters = await $this->parameters($request);
+
+        if (await $this->errors($parameters, $response)) {
+            return;
+        }
+
+        if ($row = await LoginAction->new()->run($parameters)) {
+            return await $this->respond($response, 200, "ok", $row->without(
+              "deleted_at",
+              "password"
+            ));
+        }
+
+        await $this->respond($response, 400, "error", <
+          "password" => "Invalid credentials",
+        >);
+    }
+}

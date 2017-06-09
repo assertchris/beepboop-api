@@ -1,0 +1,76 @@
+#!/usr/bin/env php
+<?php
+
+require_once __DIR__ . "/../bootstrap/environment.php";
+
+use Carbon\Carbon;
+
+if (count($argv) < 4) {
+    print "usage: scripts/email-invoice token email invoice_id" . PHP_EOL;
+    exit;
+}
+
+if (!is_numeric($argv[3])) {
+    print "invoice_id must be a number" . PHP_EOL;
+    exit;
+}
+
+$url = getenv("APP_URL");
+$host = getenv("EMAIL_HOST");
+$port = getenv("EMAIL_PORT");
+$encryption = getenv("EMAIL_ENCRYPTION");
+$username = getenv("EMAIL_USERNAME");
+$password = getenv("EMAIL_PASSWORD");
+
+$options = [
+    "http" => [
+        "method" => "POST",
+        "ignore_errors" => true,
+    ],
+];
+
+$token = base64_decode($argv[1]);
+$email = base64_decode($argv[2]);
+$id = $argv[3];
+
+$data = file_get_contents("{$url}/invoice/generate/{$id}?token={$token}", false, stream_context_create($options));
+$json = json_decode($data);
+
+// print_r($data);
+// print_r($json);
+// exit;
+
+if ($json->status !== "ok") {
+    print "Could not generate invoice" . PHP_EOL;
+    exit;
+}
+
+$device = $json->data->device;
+$invoice = $json->data->invoice;
+$user = $json->data->user;
+$pdf = base64_decode($json->data->pdf);
+
+$date = Carbon::parse($invoice->created_at);
+
+file_put_contents(__DIR__ . "/invoice.pdf", $pdf);
+
+$transport = (new Swift_SmtpTransport())
+    ->setHost($host)
+    ->setPort($port)
+    ->setEncryption($encryption)
+    ->setUsername($username)
+    ->setPassword($password);
+
+$mailer = new Swift_Mailer($transport);
+
+$message = (new Swift_Message)
+    ->setSubject("Nelisat invoice")
+    ->setFrom(["cgpitt@gmail.com" => "Christopher Pitt (Nelisat tester)"])
+    ->setTo([$email])
+    ->setBody("We've attached the invoice for {$date->format("F Y")}.", "text/html")
+    ->attach(Swift_Attachment::fromPath(__DIR__ . "/invoice.pdf"))
+    ->setCharset("UTF-8");
+
+$mailer->send($message);
+
+unlink(__DIR__ . "/invoice.pdf");

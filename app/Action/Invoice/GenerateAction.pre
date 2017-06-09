@@ -1,0 +1,21 @@
+<?php
+
+namespace Beepboop\Action\Invoice;
+
+use Amp\Process;
+use Beepboop\Action;
+
+use function Beepboop\prepare;
+
+class GenerateAction implements Action
+{
+    async public function run($parameters = null)
+    {
+        $parameters = <$parameters>;
+
+        $process = new Process(BASE_PATH . "/scripts/generate-invoice {$parameters->id}");
+        $result = await $process->exec(Process::BUFFER_ALL);
+
+        return $result->stdout;
+    }
+}

@@ -1,0 +1,19 @@
+<?php
+
+namespace Beepboop\Responder;
+
+use Aerys\Request;
+use Aerys\Response;
+use Beepboop\Action\User\LoginAction;
+use Beepboop\Responder;
+use Beepboop\Responder\Responds;
+
+class CorsResponder implements Responder
+{
+    use Responds;
+
+    public function run(Request $request, Response $response, array $arguments = [])
+    {
+        return await $this->respond($response, 200, "ok");
+    }
+}

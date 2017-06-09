@@ -1,0 +1,31 @@
+<?php
+
+namespace Beepboop\Responder\User;
+
+use Aerys\Request;
+use Aerys\Response;
+use Beepboop\Action\User\DeleteAction;
+use Beepboop\Responder;
+use Beepboop\Responder\Responds;
+
+class DeleteResponder implements Responder
+{
+    use Responds;
+
+    public function run(Request $request, Response $response, array $arguments = [])
+    {
+        if (await $this->auth($request, $response)) {
+            return;
+        }
+
+        $parameters = <$arguments>;
+
+        if (await $this->errors($parameters, $response)) {
+            return;
+        }
+
+        await DeleteAction->new()->run($parameters);
+
+        await $this->respond($response, 200, "ok");
+    }
+}

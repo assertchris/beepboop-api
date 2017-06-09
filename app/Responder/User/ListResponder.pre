@@ -1,0 +1,81 @@
+<?php
+
+namespace Beepboop\Responder\User;
+
+use Aerys\Request;
+use Aerys\Response;
+use Beepboop\Action\Device\ListAction as DeviceListAction;
+use Beepboop\Action\Group\ListAction as GroupListAction;
+use Beepboop\Action\Invoice\ListAction as InvoiceListAction;
+use Beepboop\Action\User\ListAction as UserListAction;
+use Beepboop\Responder;
+use Beepboop\Responder\Responds;
+
+class ListResponder implements Responder
+{
+    use Responds;
+
+    public function run(Request $request, Response $response, array $arguments = [])
+    {
+        if (await $this->auth($request, $response)) {
+            return;
+        }
+
+        $parameters = $request->getAllParams();
+        $parameters = <$parameters>->merge($arguments);
+
+        $parameters->user = $request->locals["beepboop.user"];
+
+        if (await $this->errors($parameters, $response)) {
+            return;
+        }
+
+        $devices = await DeviceListAction->new()->run();
+        $groups = await GroupListAction->new()->run();
+        $invoices = await InvoiceListAction->new()->run();
+
+        $users = (await UserListAction->new()->run($parameters))->map(($user) => {
+            unset($user->deleted_at);
+            unset($user->password);
+            unset($user->token);
+
+            $linkedDevices = [];
+            $linkedGroups = [];
+
+            $groupIds = [];
+
+            $devices->each(($device) => {
+                if ($device->customer_id === $user->id) {
+                    $linkedDevices[] = $device->without(
+                        "deleted_at"
+                    );
+
+                    $groupIds[] = $device->group_id;
+                }
+            });
+
+            $groups->each(($group) => {
+                if (in_array($group->id, $groupIds)) {
+                    $linkedGroups[] = $group->without(
+                        "deleted_at"
+                    );
+                }
+            });
+
+            $user->devices = $linkedDevices;
+            $user->groups = $linkedGroups;
+
+            $user->due = false;
+
+            $invoices->each(($invoice) => {
+                if ($invoice->paid !== 1) {
+                  $user->due = true;
+                }
+            });
+
+            return $user;
+        });
+
+        await $this->respond($response, 200, "ok", $users);
+    }
+}

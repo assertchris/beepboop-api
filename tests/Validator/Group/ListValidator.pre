@@ -1,0 +1,21 @@
+<?php
+
+namespace Beepboop\Tests\Validator\Group;
+
+use Beepboop\Tests\InsertsGroup;
+use Beepboop\Tests\Test;
+use Beepboop\Validator\Group\ListValidator;
+
+class ListValidatorTest extends Test
+{
+    use InsertsGroup;
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\Group\ListValidator::run
+     */
+    public function can_list_groups()
+    {
+        $this->markTestSkipped();
+    }
+}

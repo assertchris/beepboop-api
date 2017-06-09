@@ -1,0 +1,54 @@
+<?php
+
+namespace Beepboop\Responder\Group;
+
+use Aerys\Request;
+use Aerys\Response;
+use Beepboop\Action\Group\ViewAction as GroupViewAction;
+use Beepboop\Action\User\ListAction as UserListAction;
+use Beepboop\Responder;
+use Beepboop\Responder\Responds;
+
+class ViewResponder implements Responder
+{
+    use Responds;
+
+    public function run(Request $request, Response $response, array $arguments = [])
+    {
+        if (await $this->auth($request, $response)) {
+            return;
+        }
+
+        $parameters = $request->getAllParams();
+        $parameters = <$parameters>->merge($arguments);
+
+        if (await $this->errors($parameters, $response)) {
+            return;
+        }
+
+        $users = await UserListAction->new()->run($parameters);
+        $group = await GroupViewAction->new()->run($parameters);
+
+        foreach ($users as $user) {
+          if ($user->id === $group->administrator_id) {
+              $group->administrator = $user->without(
+                "deleted_at",
+                "password",
+                "token"
+              );
+          }
+
+          if ($user->id === $group->technician_id) {
+              $group->technician = $user->without(
+                "deleted_at",
+                "password",
+                "token"
+              );
+          }
+        }
+
+        await $this->respond($response, 200, "ok", $group->without(
+            "deleted_at"
+        ));
+    }
+}

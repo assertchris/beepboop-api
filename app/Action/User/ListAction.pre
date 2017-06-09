@@ -1,0 +1,42 @@
+<?php
+
+namespace Beepboop\Action\User;
+
+use Beepboop\Action;
+
+use function Beepboop\prepare;
+
+class ListAction implements Action
+{
+    async public function run($parameters = null)
+    {
+        if ($parameters->group_id !== null) {
+            $query = "
+                SELECT `users`.*
+                FROM `users`
+                WHERE `users`.`id` IN (SELECT `devices`.`customer_id` AS `id` FROM `devices` WHERE `devices`.`group_id` = :group_id AND `devices`.`deleted_at` IS NULL)
+                AND `users`.`deleted_at` IS NULL
+            ";
+
+            $result = await prepare($query, <
+                "group_id" => $parameters->group_id,
+            >);
+
+            if ($rows = await $result->fetchObjects()) {
+                return <$rows>;
+            }
+
+            return <>;
+        }
+
+        $results = await prepare(
+            "SELECT * FROM `users` WHERE `deleted_at` IS NULL"
+        );
+
+        if ($rows = await $results->fetchObjects()) {
+            return <$rows>;
+        }
+
+        return <>;
+    }
+}

@@ -1,0 +1,105 @@
+<?php
+
+namespace Beepboop\Action\Me;
+
+use Beepboop\Action;
+
+use function Beepboop\prepare;
+
+class InvoicesAction implements Action
+{
+    async public function run($parameters = null)
+    {
+        $devices = <>;
+        $invoices = <>;
+        $measurements = <>;
+
+        $devicesResult = await prepare("SELECT * FROM `devices` WHERE `customer_id` = :customer_id AND `deleted_at` IS NULL", <
+            "customer_id" => $parameters->user->id,
+        >);
+
+        if ($devicesRows = await $devicesResult->fetchObjects()) {
+            $devices = $devices->merge($devicesRows);
+
+            foreach ($devicesRows as $devicesRow) {
+                $measurementsResult = await prepare("SELECT * FROM `primary_measurements` WHERE `serial_number` = :serial_number ORDER BY `created_at` ASC", <
+                    "serial_number" => $devicesRow->serial_number,
+                >);
+
+                if ($measurementsRows = await $measurementsResult->fetchObjects()) {
+                    $measurements = $measurements->merge($devicesRows);
+
+                    $ids = [];
+
+                    $invoicesResult = await prepare("SELECT * FROM `invoices` WHERE `device_id` = :device_id AND `deleted_at` IS NULL", <
+                        "device_id" => $devicesRow->id,
+                    >);
+
+                    if ($invoicesRows = await $invoicesResult->fetchObjects()) {
+                        foreach ($invoicesRows as $invoicesRow) {
+                            $ids[] = $invoicesRow->measurement_id;
+                        }
+                    }
+
+                    $rate = null;
+
+                    $settingResult = await prepare(
+                        "SELECT * FROM `settings` WHERE `name` = :name ORDER BY `created_at` DESC LIMIT 1",
+                        <"name" => "rate">
+                    );
+
+                    if ($row = await $settingResult->fetchObject()) {
+                        $rate = $row->value;
+                    }
+
+                    foreach ($measurementsRows as $i => $measurementsRow) {
+                        if (!in_array($measurementsRow->id, $ids)) {
+                            $usage = $measurementsRow->usage;
+
+                            if ($i > 0) {
+                                $usage = $measurementsRow->usage - $measurementsRows[$i - 1]->usage;
+                            }
+
+                            await prepare("INSERT INTO `invoices` (`usage`, `rate`, `device_id`, `group_id`, `measurement_id`, `created_at`) VALUES (:usage, :rate, :device_id, :group_id, :measurement_id, :created_at)", <
+                                "usage" => $usage,
+                                "rate" => $rate,
+                                "device_id" => $devicesRow->id,
+                                "group_id" => $devicesRow->group_id,
+                                "measurement_id" => $measurementsRow->id,
+                                "created_at" => $measurementsRow->created_at,
+                            >);
+                        }
+                    }
+                }
+            }
+
+            $invoicesResult = await prepare("SELECT * FROM `invoices` WHERE `device_id` = :device_id AND `deleted_at` IS NULL", <
+                "device_id" => $devicesRow->id,
+            >);
+
+            if ($invoicesRows = await $invoicesResult->fetchObjects()) {
+                $mapped = <$invoicesRows>->map(($invoice) => {
+                    foreach ($devices as $device) {
+                        if ($invoice->device_id === $device->id) {
+                            $invoice->device = $device;
+                            break;
+                        }
+                    }
+
+                    foreach ($measurements as $measurement) {
+                        if ($invoice->measurement_id === $measurement->id) {
+                            $invoice->measurement = $measurement;
+                            break;
+                        }
+                    }
+
+                    return $invoice;
+                });
+
+                $invoices = $invoices->merge($mapped);
+            }
+        }
+
+        return $invoices;
+    }
+}

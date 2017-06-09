@@ -1,0 +1,21 @@
+<?php
+
+namespace Beepboop\Validator\Group;
+
+use Beepboop\Validator;
+use Beepboop\Validator\Validates;
+
+class ListValidator implements Validator
+{
+    use Validates;
+
+    async public function run($parameters = null)
+    {
+        $errors = <>;
+        $parameters = <$parameters>;
+
+        // TODO
+
+        return $errors;
+    }
+}

@@ -1,0 +1,111 @@
+#!/usr/bin/env php
+<?php
+
+require_once __DIR__ . "/../bootstrap/environment.php";
+
+use Beepboop\Action\Device\ViewAction as DeviceViewAction;
+use Beepboop\Action\Invoice\ViewAction as InvoiceViewAction;
+use Beepboop\Action\User\ViewAction as UserViewAction;
+use Carbon\Carbon;
+use Dompdf\Dompdf;
+
+use function Amp\wait;
+use function Beepboop\prepare;
+
+if (count($argv) < 2) {
+    print "usage: scripts/generate-invoice invoice_id" . PHP_EOL;
+    exit;
+}
+
+if (!is_numeric($argv[1])) {
+    print "invoice_id must be a number" . PHP_EOL;
+    exit;
+}
+
+$invoice = wait((new InvoiceViewAction)->run([
+    "id" => $argv[1],
+]));
+
+$device = wait((new DeviceViewAction)->run([
+    "id" => $invoice->device_id,
+]));
+
+$user = wait((new UserViewAction)->run([
+    "id" => $device->customer_id,
+]));
+
+// print_r($invoice);
+// print_r($device);
+// print_r($user);
+// exit;
+
+$date = Carbon::parse($invoice->created_at);
+
+$address = nl2br($user->address);
+$phone = $user->phone;
+
+$usage = number_format($invoice->usage, 2);
+$rate = number_format($invoice->rate, 2);
+$total = number_format(($invoice->rate * $invoice->usage) / 100, 2);
+
+$dompdf = new Dompdf();
+
+$dompdf->loadHtml(trim("
+<!doctype html>
+<html lang='en'>
+    <body style='font-family: helvetica, arial; font-size: 11pt;'>
+        <table width='100%' height='100%' cellpadding='10' cellspacing='0'>
+            <tr>
+                <td style='width: 20%; white-space: nowrap; padding-bottom: 3em;'>
+                    [logo]<br />
+                    [address]<br />
+                    [phone]
+                </td>
+                <td style='width: 60%;'>
+
+                </td>
+                <td style='width: 20%; white-space: nowrap; padding-bottom: 3em;'>
+                    Invoice #{$invoice->id}<br />
+                    Account #{$user->id}<br />
+                    {$address}<br />
+                    {$phone}
+                </td>
+            </tr>
+            <tr>
+                <td colspan='2'>
+                    Usage for {$date->format("F (Y)")}
+                </td>
+                <td align='right' style='border-left: solid 2px #e0e0e0;'>
+                    (litres) {$usage}
+                </td>
+            </tr>
+            <tr>
+                <td colspan='2'>
+                    Rate per litre
+                </td>
+                <td align='right' style='border-left: solid 2px #e0e0e0;'>
+                    (cents) {$rate}
+                </td>
+            </tr>
+            <tr>
+                <td colspan='2' align='right' style='border-top: solid 2px #e0e0e0;'>
+                    Total
+                </td>
+                <td align='right' style='border-left: solid 2px #e0e0e0; border-top: solid 2px #e0e0e0;'>
+                    R {$total}
+                </td>
+            </tr>
+            <tr>
+                <td colspan='3' style='font-size: 7pt; padding-top: 3em; border-top: solid 2px #e0e0e0;'>
+                    [legal text]
+                </td>
+            </tr>
+        </table>
+    </body>
+</html>
+"));
+
+$dompdf->setPaper("A4", "portrait");
+$dompdf->render();
+
+print $dompdf->output();

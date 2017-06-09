@@ -1,0 +1,45 @@
+<?php
+
+namespace Beepboop\Validator\Device;
+
+use Beepboop\Validator;
+use Beepboop\Validator\Validates;
+
+use function Beepboop\prepare;
+
+class EnsureValidator implements Validator
+{
+    use Validates;
+
+    async public function run($parameters = null)
+    {
+        $errors = <>;
+        $parameters = <$parameters>;
+
+        if ($parameters->serial_number === null) {
+          $errors->serial_number = "Serial number is required";
+        } else {
+            $serialNumberResult = await prepare(
+                "SELECT * FROM devices WHERE serial_number = :serial_number AND deleted_at IS NULL LIMIT 1",
+                <"serial_number" => $parameters->serial_number>
+            );
+
+            if (!await $serialNumberResult->fetchObject()) {
+                $errors->serial_number = "Device not found";
+            }
+        }
+
+        if (!empty($parameters->customer_id)) {
+            $customerIdResult = await prepare(
+                "SELECT * FROM users WHERE id = :id AND deleted_at IS NULL LIMIT 1",
+                <"id" => $parameters->customer_id>
+            );
+
+            if (!await $customerIdResult->fetchObject()) {
+                $errors->customer_id = "Customer not found";
+            }
+        }
+
+        return $errors;
+    }
+}

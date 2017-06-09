@@ -1,0 +1,46 @@
+<?php
+
+namespace Beepboop\Tests\Action\Group;
+
+use Beepboop\Tests\InsertsGroup;
+use Beepboop\Tests\Test;
+use Beepboop\Action\Group\DeleteAction;
+
+use function Beepboop\hash;
+use function Beepboop\prepare;
+
+class DeleteActionTest extends Test
+{
+    use InsertsGroup;
+
+    /**
+     * @test
+     * @covers Beepboop\Action\Group\DeleteAction::run
+     */
+    public function can_delete_users()
+    {
+        $this->wait(() => {
+            $added = await $this->insertGroup();
+
+            $foundResult = await prepare("SELECT * FROM groups WHERE id = :id AND deleted_at IS NULL LIMIT 1", <
+                "id" => $added->id,
+            >);
+
+            $foundRow = await $foundResult->fetchObject();
+
+            $this->assertNotNull($foundRow);
+
+            await DeleteAction->new()->run(<
+                "id" => $added->id,
+            >);
+
+            $missingResult = await prepare("SELECT * FROM groups WHERE id = :id AND deleted_at IS NULL LIMIT 1", <
+                "id" => $added->id,
+            >);
+
+            $missingRow = await $missingResult->fetchObject();
+
+            $this->assertNull($missingRow);
+        });
+    }
+}

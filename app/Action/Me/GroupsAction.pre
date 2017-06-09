@@ -1,0 +1,34 @@
+<?php
+
+namespace Beepboop\Action\Me;
+
+use Beepboop\Action;
+
+use const Beepboop\USER_SYSTEM_ADMINISTRATOR;
+
+use function Beepboop\prepare;
+
+class GroupsAction implements Action
+{
+    async public function run($parameters = null)
+    {
+        if ($parameters->user->type === USER_SYSTEM_ADMINISTRATOR) {
+            $results = await prepare("SELECT * FROM `groups` WHERE `deleted_at` IS NULL");
+
+            if ($rows = await $results->fetchObjects()) {
+                return <$rows>;
+            }
+        }
+
+        $results = await prepare("SELECT * FROM `groups` WHERE (`technician_id` = :technician_id OR `administrator_id` = :administrator_id) AND `deleted_at` IS NULL", <
+            "technician_id" => $parameters->user->id,
+            "administrator_id" => $parameters->user->id,
+        >);
+
+        if ($rows = await $results->fetchObjects()) {
+            return <$rows>;
+        }
+
+        return <>;
+    }
+}

@@ -1,0 +1,89 @@
+<?php
+
+namespace Beepboop\Tests\Validator\User;
+
+use Beepboop\Tests\InsertsUser;
+use Beepboop\Tests\Test;
+use Beepboop\Validator\User\RegisterValidator;
+
+use function Beepboop\prepare;
+
+class RegisterValidatorTest extends Test
+{
+    use InsertsUser;
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\User\RegisterValidator::run
+     */
+    public function can_detect_empty_required_fields()
+    {
+        $this->wait(() => {
+            $result = await RegisterValidator->new()->run();
+
+            $this->assertEquals("Name is required", $result->name);
+            $this->assertEquals("Address is required", $result->address);
+            $this->assertEquals("Phone is required", $result->phone);
+            $this->assertEquals("Email is required", $result->email);
+            $this->assertEquals("Password is required", $result->password);
+            $this->assertEquals("Password confirmation is required", $result->password_confirmation);
+        });
+    }
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\User\RegisterValidator::run
+     */
+    public function can_detect_invalid_password_length()
+    {
+        $this->wait(() => {
+            $result = await RegisterValidator->new()->run(<
+                "name" => "Chris",
+                "address" => "1 street",
+                "phone" => "1234567890",
+                "email" => "foo@bar.com",
+                "password" => "pass123",
+                "password_confirmation" => "pass123",
+            >);
+
+            $this->assertEquals("Password must be at least 8 characters", $result->password);
+        });
+    }
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\User\RegisterValidator::run
+     */
+    public function can_detect_mismatched_passwords()
+    {
+        $this->wait(() => {
+            $result = await RegisterValidator->new()->run(<
+                "name" => "Chris",
+                "address" => "1 street",
+                "phone" => "1234567890",
+                "email" => "foo@bar.com",
+                "password" => "pass1234",
+                "password_confirmation" => "pass123"
+            >);
+
+            $this->assertEquals("Passwords must match", $result->password_confirmation);
+        });
+    }
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\User\RegisterValidator::run
+     */
+    public function can_detect_duplicate_emails()
+    {
+        $this->wait(() => {
+            await $this->insertUser();
+
+            $result = await RegisterValidator->new()->run(<
+                "email" => "test@test.test"
+            >);
+
+            $this->assertEquals("Email must be unique", $result->email);
+        });
+    }
+}

@@ -1,0 +1,33 @@
+<?php
+
+namespace Beepboop\Responder\Group;
+
+use Aerys\Request;
+use Aerys\Response;
+use Beepboop\Action\Group\AddAction;
+use Beepboop\Responder;
+use Beepboop\Responder\Responds;
+
+class AddResponder implements Responder
+{
+    use Responds;
+
+    public function run(Request $request, Response $response, array $arguments = [])
+    {
+        if (await $this->auth($request, $response)) {
+            return;
+        }
+
+        $parameters = await $this->parameters($request);
+
+        if (await $this->errors($parameters, $response)) {
+            return;
+        }
+
+        $row = await AddAction->new()->run($parameters);
+
+        await $this->respond($response, 200, "ok", $row->without(
+            "deleted_at"
+        ));
+    }
+}

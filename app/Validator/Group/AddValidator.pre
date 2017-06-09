@@ -1,0 +1,53 @@
+<?php
+
+namespace Beepboop\Validator\Group;
+
+use Beepboop\Validator;
+use Beepboop\Validator\Validates;
+
+use function Beepboop\prepare;
+
+class AddValidator implements Validator
+{
+    use Validates;
+
+    async public function run($parameters = null)
+    {
+        $errors = <>;
+        $parameters = <$parameters>;
+
+        if ($parameters->name === null) {
+          $errors->name = "Name is required";
+        } else {
+            $groupNameResult = await prepare("SELECT * FROM groups WHERE name = :name AND deleted_at IS NULL LIMIT 1", $parameters);
+
+            if ($row = await $groupNameResult->fetchObject()) {
+                $errors->name = "Name must be unique";
+            }
+        }
+
+        if ($parameters->technician_id !== null) {
+            $technicianIdResult = await prepare(
+                "SELECT * FROM users WHERE id = :id AND deleted_at IS NULL LIMIT 1",
+                <"id" => $parameters->technician_id>
+            );
+
+            if (!await $technicianIdResult->fetchObject()) {
+                $errors->technician_id = "Technician not found";
+            }
+        }
+
+        if ($parameters->administrator_id !== null) {
+            $administratorIdResult = await prepare(
+                "SELECT * FROM users WHERE id = :id AND deleted_at IS NULL LIMIT 1",
+                <"id" => $parameters->administrator_id>
+            );
+
+            if (!await $administratorIdResult->fetchObject()) {
+                $errors->administrator_id = "Administrator not found";
+            }
+        }
+
+        return $errors;
+    }
+}

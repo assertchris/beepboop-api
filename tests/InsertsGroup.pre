@@ -1,0 +1,32 @@
+<?php
+
+namespace Beepboop\Tests;
+
+use function Beepboop\prepare;
+
+trait InsertsGroup
+{
+    private $data = [
+        "name" => "test",
+        "created_at" => "2017-01-01 00:00:00",
+    ];
+
+    private $columns = "`name`, `created_at`";
+
+    private $placeholders = ":name, :created_at";
+
+    async private function insertGroup($overrides = [])
+    {
+        $data = <$this->data>->merge($overrides);
+
+        $insertResult = await prepare("INSERT INTO `groups` (%s) VALUES (%s)" % [$this->columns, $this->placeholders], $data);
+
+        $selectResult = await prepare("SELECT * FROM `groups` WHERE `id` = :id", <
+            "id" => $insertResult->insertId,
+        >);
+
+        $row = await $selectResult->fetchObject();
+
+        return <$row>;
+    }
+}

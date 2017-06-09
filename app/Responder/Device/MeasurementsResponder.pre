@@ -1,0 +1,37 @@
+<?php
+
+namespace Beepboop\Responder\Device;
+
+use Aerys\Request;
+use Aerys\Response;
+use Beepboop\Action\Device\MeasurementsAction;
+use Beepboop\Responder;
+use Beepboop\Responder\Responds;
+
+class MeasurementsResponder implements Responder
+{
+    use Responds;
+
+    public function run(Request $request, Response $response, array $arguments = [])
+    {
+        if (await $this->auth($request, $response)) {
+            return;
+        }
+
+        $parameters = $request->getAllParams();
+        $parameters = <$parameters>->merge($arguments);
+
+        if (await $this->errors($parameters, $response)) {
+            return;
+        }
+
+        $measurements = await MeasurementsAction->new()->run($parameters);
+
+        $measurements = $measurements->map(($measurement) => {
+            // TODO: format
+            return $measurement;
+        });
+
+        await $this->respond($response, 200, "ok", $measurements);
+    }
+}

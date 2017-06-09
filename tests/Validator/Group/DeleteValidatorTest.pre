@@ -1,0 +1,59 @@
+<?php
+
+namespace Beepboop\Tests\Validator\Group;
+
+use Beepboop\Tests\InsertsGroup;
+use Beepboop\Tests\Test;
+use Beepboop\Validator\Group\DeleteValidator;
+
+use function Beepboop\prepare;
+
+class DeleteValidatorTest extends Test
+{
+    use InsertsGroup;
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\Group\DeleteValidator::run
+     */
+    public function can_detect_empty_required_fields()
+    {
+        $this->wait(() => {
+            $result = await DeleteValidator->new()->run();
+
+            $this->assertEquals("Id is required", $result->id);
+        });
+    }
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\Group\DeleteValidator::run
+     */
+    public function can_detect_invalid_id()
+    {
+        $this->wait(() => {
+            $result = await DeleteValidator->new()->run(<
+                "id" => 123
+            >);
+
+            $this->assertEquals("Group not found", $result->id);
+        });
+    }
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\Group\DeleteValidator::run
+     */
+    public function can_detect_valid_id()
+    {
+        $this->wait(() => {
+            $user = await $this->insertGroup();
+
+            $result = await DeleteValidator->new()->run(<
+                "id" => $user->id,
+            >);
+
+            $this->assertEquals(0, $result->length());
+        });
+    }
+}

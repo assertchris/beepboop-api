@@ -1,0 +1,44 @@
+<?php
+
+namespace Beepboop\Tests\Action\User;
+
+use Beepboop\Tests\InsertsUser;
+use Beepboop\Tests\Test;
+use Beepboop\Action\User\AddAction;
+
+class AddActionTest extends Test
+{
+    use InsertsUser;
+
+    private $ignore = [
+        "password",
+        "password_confirmation",
+        "created_at",
+    ];
+
+    /**
+     * @test
+     * @covers Beepboop\Action\User\AddAction::run
+     */
+    public function can_add_users()
+    {
+        $this->wait(() => {
+            $added = await AddAction->new()->run($this->data);
+
+            if ($added === null) {
+                $this->fail("user not added");
+            }
+
+            foreach ($this->data as $key => $value) {
+                if (in_array($key, $this->ignore)) {
+                    continue;
+                }
+
+                $this->assertEquals($value, $added->{$key});
+            }
+
+            $this->assertNull($added->token);
+            $this->assertNull($added->password);
+        });
+    }
+}

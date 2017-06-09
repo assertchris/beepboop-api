@@ -1,0 +1,27 @@
+<?php
+
+namespace Beepboop\Validator\Me;
+
+use Beepboop\Validator;
+use Beepboop\Validator\Validates;
+
+use const Beepboop\USER_CUSTOMER;
+
+class InvoicesValidator implements Validator
+{
+    use Validates;
+
+    async public function run($parameters = null)
+    {
+        $errors = <>;
+        $parameters = <$parameters>;
+
+        $user = $parameters->user;
+
+        if (!in_array($user->type, [USER_CUSTOMER])) {
+            $errors->token = "You don't have permission for this request";
+        }
+
+        return $errors;
+    }
+}

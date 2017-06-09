@@ -1,0 +1,57 @@
+<?php
+
+namespace Beepboop\Tests;
+
+use Amp\Mysql\Connection;
+use Amp\Mysql\ResultSet;
+use Beepboop\Tests\Test;
+
+use function Beepboop\connect;
+use function Beepboop\hash;
+use function Beepboop\prepare;
+use function Beepboop\verify;
+
+class HelpersTest extends Test
+{
+    /**
+     * @test
+     * @covers ::Beepboop\connect
+     */
+    public function can_connect()
+    {
+        $this->wait(() => {
+            $connection = await connect();
+            $this->assertInstanceOf(Connection::class, $connection);
+        });
+    }
+
+    /**
+     * @test
+     * @covers ::Beepboop\prepare
+     */
+    public function can_prepare_sql_statements()
+    {
+        $this->wait(() => {
+            $result = await prepare("SELECT 1");
+            $this->assertInstanceOf(ResultSet::class, $result);
+        });
+    }
+
+    /**
+     * @test
+     * @covers ::Beepboop\hash
+     * @covers ::Beepboop\verify
+     */
+    public function can_hash_and_verify()
+    {
+        $plain = "this-string";
+        $hashed = hash($plain);
+
+        $this->assertNotFalse($hashed);
+        $this->assertNotEquals($plain, $hashed);
+
+        $verified = verify($plain, $hashed);
+
+        $this->assertTrue($verified);
+    }
+}

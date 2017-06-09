@@ -1,0 +1,30 @@
+<?php
+
+namespace Beepboop\Responder\User;
+
+use Aerys\Request;
+use Aerys\Response;
+use Beepboop\Action\User\RegisterAction;
+use Beepboop\Responder;
+use Beepboop\Responder\Responds;
+
+class RegisterResponder implements Responder
+{
+    use Responds;
+
+    public function run(Request $request, Response $response, array $arguments = [])
+    {
+        $parameters = await $this->parameters($request);
+
+        if (await $this->errors($parameters, $response)) {
+            return;
+        }
+
+        $row = await RegisterAction->new()->run($parameters);
+
+        await $this->respond($response, 200, "ok", $row->without(
+            "deleted_at",
+            "password"
+        ));
+    }
+}

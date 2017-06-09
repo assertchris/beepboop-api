@@ -1,0 +1,23 @@
+<?php
+
+namespace Beepboop\Tests\Validator\User;
+
+use Beepboop\Tests\Test;
+use Beepboop\Validator\User\LoginValidator;
+
+class LoginValidatorTest extends Test
+{
+    /**
+     * @test
+     * @covers Beepboop\Validator\User\LoginValidator::run
+     */
+    public function can_detect_empty_required_fields()
+    {
+        $this->wait(() => {
+            $result = await LoginValidator->new()->run();
+
+            $this->assertEquals("Email is required", $result->email);
+            $this->assertEquals("Password is required", $result->password);
+        });
+    }
+}

@@ -1,0 +1,14 @@
+<?php
+
+namespace Beepboop;
+
+use Aerys\Request;
+use Aerys\Response;
+use Closure;
+
+interface Responder
+{
+    public function run(Request $request, Response $response, array $arguments = []);
+
+    public function route(): Closure;
+}

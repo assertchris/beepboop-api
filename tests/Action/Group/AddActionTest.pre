@@ -1,0 +1,39 @@
+<?php
+
+namespace Beepboop\Tests\Action\Group;
+
+use Beepboop\Tests\InsertsGroup;
+use Beepboop\Tests\Test;
+use Beepboop\Action\Group\AddAction;
+
+class AddActionTest extends Test
+{
+    use InsertsGroup;
+
+    private $ignore = [
+        "created_at",
+    ];
+
+    /**
+     * @test
+     * @covers Beepboop\Action\Group\AddAction::run
+     */
+    public function can_add_groups()
+    {
+        $this->wait(() => {
+            $added = await AddAction->new()->run($this->data);
+
+            if ($added === null) {
+                $this->fail("group not added");
+            }
+
+            foreach ($this->data as $key => $value) {
+                if (in_array($key, $this->ignore)) {
+                    continue;
+                }
+
+                $this->assertEquals($value, $added->{$key});
+            }
+        });
+    }
+}

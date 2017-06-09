@@ -1,0 +1,8 @@
+<?php
+
+namespace Beepboop;
+
+interface Action
+{
+    async public function run($parameters = null);
+}

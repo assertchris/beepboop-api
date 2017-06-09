@@ -1,0 +1,33 @@
+<?php
+
+namespace Beepboop\Validator\Invoice;
+
+use Beepboop\Validator;
+use Beepboop\Validator\Validates;
+
+use function Beepboop\prepare;
+
+class ListValidator implements Validator
+{
+    use Validates;
+
+    async public function run($parameters = null)
+    {
+        $errors = <>;
+        $parameters = <$parameters>;
+
+        if ($parameters->customer_id === null) {
+          $errors->customer_id = "Customer Id is required";
+        } else {
+            $invoiceIdResult = await prepare("SELECT * FROM users WHERE id = :id AND deleted_at IS NULL LIMIT 1", <
+                "id" => $parameters->customer_id,
+            >);
+
+            if (!await $invoiceIdResult->fetchObject()) {
+                $errors->customer_id = "Customer not found";
+            }
+        }
+
+        return $errors;
+    }
+}

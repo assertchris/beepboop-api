@@ -1,0 +1,70 @@
+<?php
+
+namespace Beepboop\Responder\Me;
+
+use Aerys\Request;
+use Aerys\Response;
+use Beepboop\Action\Group\ListAction as GroupListAction;
+use Beepboop\Action\Me\DevicesAction;
+use Beepboop\Action\User\ListAction as UserListAction;
+use Beepboop\Responder;
+use Beepboop\Responder\Responds;
+
+class DevicesResponder implements Responder
+{
+    use Responds;
+
+    public function run(Request $request, Response $response, array $arguments = [])
+    {
+        if (await $this->auth($request, $response)) {
+            return;
+        }
+
+        $parameters = $request->getAllParams();
+        $parameters = <$parameters>->merge($arguments);
+
+        $parameters->user = $request->locals["beepboop.user"];
+
+        if (await $this->errors($parameters, $response)) {
+            return;
+        }
+
+        $groups = await GroupListAction->new()->run();
+        $users = await UserListAction->new()->run();
+        $devices = await DevicesAction->new()->run($parameters);
+
+        if ($groups === null) {
+            $groups = <>;
+        }
+
+        if ($users === null) {
+            $users = <>;
+        }
+
+        if ($devices === null) {
+            $devices = <>;
+        }
+
+        $devices = $devices->map(($device) => {
+            unset($device->deleted_at);
+
+            foreach ($users as $user) {
+                if ($device->customer_id === $user->id) {
+                    $device->customer = $user;
+                    break;
+                }
+            }
+
+            foreach ($groups as $group) {
+                if ($device->group_id === $group->id) {
+                    $device->group = $group;
+                    break;
+                }
+            }
+
+            return $device;
+        });
+
+        await $this->respond($response, 200, "ok", $devices);
+    }
+}

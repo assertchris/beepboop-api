@@ -1,0 +1,5 @@
+<?php
+
+namespace Beepboop\Validator\User;
+
+class ViewValidator extends DeleteValidator {}

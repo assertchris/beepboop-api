@@ -1,0 +1,31 @@
+<?php
+
+namespace Beepboop\Validator\User;
+
+use Beepboop\Validator;
+use Beepboop\Validator\Validates;
+
+use function Beepboop\prepare;
+
+class DeleteValidator implements Validator
+{
+    use Validates;
+
+    async public function run($parameters = null)
+    {
+        $errors = <>;
+        $parameters = <$parameters>;
+
+        if ($parameters->id === null) {
+          $errors->id = "Id is required";
+        } else {
+            $userIdResult = await prepare("SELECT * FROM users WHERE id = :id AND deleted_at IS NULL LIMIT 1", $parameters);
+
+            if (!await $userIdResult->fetchObject()) {
+                $errors->id = "User not found";
+            }
+        }
+
+        return $errors;
+    }
+}

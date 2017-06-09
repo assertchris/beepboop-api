@@ -1,0 +1,53 @@
+<?php
+
+namespace Beepboop\Validator\User;
+
+use Beepboop\Validator;
+use Beepboop\Validator\Validates;
+use Beepboop\Validator\ValidatesGroupAdministration;
+
+use const Beepboop\USER_CUSTOMER;
+use const Beepboop\USER_TECHNICIAN;
+use const Beepboop\USER_GROUP_ADMINISTRATOR;
+use const Beepboop\USER_SYSTEM_ADMINISTRATOR;
+
+class ListValidator implements Validator
+{
+    use Validates;
+    use ValidatesGroupAdministration;
+
+    async public function run($parameters = null)
+    {
+        $errors = <>;
+        $parameters = <$parameters>;
+
+        $user = $parameters->user;
+        $conditions = <>;
+
+        if ($user->type === USER_CUSTOMER) {
+            return $errors->with("token", "You don't have permission for this request");
+        }
+
+        if ($parameters->group_id !== null) {
+            $params = [$user->type, $user->id, $parameters->group_id];
+            $prevent1 = await $this->preventAdministratorForGroup(...$params);
+            $prevent2 = await $this->preventTechnicianForGroup(...$params);
+
+            if ($user->type === USER_GROUP_ADMINISTRATOR && $prevent1) {
+                $errors->group_id = "You don't have permission for this group";
+            }
+
+            if ($user->type === USER_TECHNICIAN && $prevent2) {
+                $errors->group_id = "You don't have permission for this group";
+            }
+
+            $conditions->group_id = true;
+        }
+
+        if ($conditions->length() === 0 && $user->type !== USER_SYSTEM_ADMINISTRATOR) {
+            return $errors->with("token", "You don't have permission for this request");
+        }
+
+        return $errors;
+    }
+}

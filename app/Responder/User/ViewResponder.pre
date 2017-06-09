@@ -1,0 +1,51 @@
+<?php
+
+namespace Beepboop\Responder\User;
+
+use Aerys\Request;
+use Aerys\Response;
+use Beepboop\Action\Device\ListAction as DeviceListAction;
+use Beepboop\Action\User\ViewAction as UserViewAction;
+use Beepboop\Responder;
+use Beepboop\Responder\Responds;
+
+class ViewResponder implements Responder
+{
+    use Responds;
+
+    public function run(Request $request, Response $response, array $arguments = [])
+    {
+        if (await $this->auth($request, $response)) {
+            return;
+        }
+
+        $parameters = $request->getAllParams();
+        $parameters = <$parameters>->merge($arguments);
+
+        if (await $this->errors($parameters, $response)) {
+            return;
+        }
+
+        $devices = await DeviceListAction->new()->run();
+
+        $user = await UserViewAction->new()->run($parameters);
+
+        $linked = [];
+
+        $devices->each(($device) => {
+            if ($device->customer_id === $user->id) {
+                $linked[] = $device->without(
+                    "deleted_at"
+                );
+            }
+        });
+
+        $user->devices = $linked;
+
+        await $this->respond($response, 200, "ok", $user->without(
+            "deleted_at",
+            "password",
+            "token"
+        ));
+    }
+}

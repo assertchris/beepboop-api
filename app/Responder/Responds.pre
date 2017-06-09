@@ -1,0 +1,99 @@
+<?php
+
+namespace Beepboop\Responder;
+
+use Aerys\Request;
+use Aerys\Response;
+use Closure;
+use Exception;
+
+use function Beepboop\prepare;
+
+trait Responds
+{
+    async private function parameters(Request $request)
+    {
+        $body = await $request->getBody();
+        parse_str($body, $data);
+
+        return <$data>;
+    }
+
+    async private function respond(Response $response, int $code,  string $status, $data = [])
+    {
+        $response
+            ->setHeader("Access-Control-Allow-Origin", "*")
+            ->setHeader("Access-Control-Allow-Headers", "x-token")
+            ->setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+            ->setHeader("Content-type", "text/json")
+            ->setStatus($code)
+            ->end(json_encode([
+                "status" => $status,
+                "data" => is_object($data) ? $data->toArray() : $data,
+            ]));
+    }
+
+    async private function errors($parameters, Response $response)
+    {
+        $validator = str_replace("Responder", "Validator", static::class);
+
+        if (!class_exists($validator)) {
+            throw new Exception("{$validator} is missing");
+        }
+
+        $errors = await (new $validator())->run($parameters);
+
+        if ($errors->length()) {
+            await $this->respond($response, 400, "error", $errors);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    async private function auth(Request $request, Response $response)
+    {
+        $token = $request->getHeader("x-token");
+
+        if (empty($token)) {
+          return false;
+        }
+
+        return $this->authToken($token, $request, $response);
+    }
+
+    async private function authToken(string $token, Request $request, Response $response) {
+        if (empty($token)) {
+          return await $this->respond($response, 403, "error", <
+            "token" => "Token missing"
+          >);
+        }
+
+        $results = await prepare(
+            "SELECT * FROM users WHERE token = :token LIMIT 1",
+            <"token" => $token>
+        );
+
+        $row = await $results->fetchObject();
+
+        if ($row === null) {
+          await $this->respond($response, 403, "error", <
+            "token" => "Token invalid"
+          >);
+
+          return true;
+        }
+
+        $request->locals["beepboop.user"] = $row;
+
+        return false;
+    }
+
+    public function route(): Closure
+    {
+        return (Request $request, Response $response, array $arguments = []) => {
+            return $this->run($request, $response, $arguments);
+        };
+    }
+}

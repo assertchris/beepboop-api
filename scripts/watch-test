@@ -1,0 +1,57 @@
+#!/usr/bin/env php
+<?php
+
+require_once __DIR__ . "/../bootstrap/tests.php";
+
+use Symfony\Component\Finder\Finder;
+use Yosymfony\ResourceWatcher\ResourceWatcher;
+use Yosymfony\ResourceWatcher\ResourceCacheFile;
+
+if (getenv("BEEPBOOP_TEST_COVERAGE")) {
+    passthru("BEEPBOOP_AVOID_REBUILD=1 composer run test:coverage");
+} else {
+    passthru("BEEPBOOP_AVOID_REBUILD=1 composer run test");
+}
+
+$finder = new Finder();
+
+$finder->files()
+    ->name("*.pre")
+    ->in([
+        __DIR__ . "/../app",
+        __DIR__ . "/../tests",
+    ]);
+
+$cache = new ResourceCacheFile(__DIR__ . "/.test-changes.php");
+
+$watcher = new ResourceWatcher($cache);
+$watcher->setFinder($finder);
+
+while (true) {
+    $watcher->findChanges();
+
+    if ($watcher->hasChanges()) {
+        $resources = array_merge(
+            $watcher->getNewResources(),
+            $watcher->getDeletedResources(),
+            $watcher->getUpdatedResources()
+        );
+
+        foreach ($resources as $resource) {
+            $pre = realpath($resource);
+            $php = preg_replace("/pre$/", "php", $pre);
+
+            print "Rebuilding {$pre}" . PHP_EOL;
+
+            Pre\Plugin\compile($pre, $php, true, true);
+        }
+
+        if (getenv("BEEPBOOP_TEST_COVERAGE")) {
+            passthru("BEEPBOOP_AVOID_REBUILD=1 composer run test:coverage");
+        } else {
+            passthru("BEEPBOOP_AVOID_REBUILD=1 composer run test");
+        }
+    }
+
+    usleep(100000);
+}

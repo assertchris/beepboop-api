@@ -1,0 +1,59 @@
+<?php
+
+namespace Beepboop\Tests\Validator\User;
+
+use Beepboop\Tests\InsertsUser;
+use Beepboop\Tests\Test;
+use Beepboop\Validator\User\AddValidator;
+
+use function Beepboop\prepare;
+
+class AddValidatorTest extends Test
+{
+    use InsertsUser;
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\User\AddValidator::run
+     */
+    public function can_detect_empty_required_fields()
+    {
+        $this->wait(() => {
+            $result = await AddValidator->new()->run();
+
+            $this->assertEquals("Email is required", $result->email);
+        });
+    }
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\User\AddValidator::run
+     */
+    public function can_detect_non_numeric_type()
+    {
+        $this->wait(() => {
+            $result = await AddValidator->new()->run(<
+                "type" => "foo",
+            >);
+
+            $this->assertEquals("Type must be a number", $result->type);
+        });
+    }
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\User\AddValidator::run
+     */
+    public function can_detect_duplicate_emails()
+    {
+        $this->wait(() => {
+            await $this->insertUser();
+
+            $result = await AddValidator->new()->run(<
+                "email" => "test@test.test"
+            >);
+
+            $this->assertEquals("Email must be unique", $result->email);
+        });
+    }
+}

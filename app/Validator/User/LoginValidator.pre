@@ -1,0 +1,27 @@
+<?php
+
+namespace Beepboop\Validator\User;
+
+use Beepboop\Validator;
+use Beepboop\Validator\Validates;
+
+class LoginValidator implements Validator
+{
+    use Validates;
+
+    async public function run($parameters = null)
+    {
+        $errors = <>;
+        $parameters = <$parameters>;
+
+        if ($parameters->email === null) {
+            $errors->email = "Email is required";
+        }
+
+        if ($parameters->password === null) {
+            $errors->password = "Password is required";
+        }
+
+        return $errors;
+    }
+}

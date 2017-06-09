@@ -1,0 +1,57 @@
+#!/usr/bin/env php
+<?php
+
+require_once __DIR__ . "/../bootstrap/environment.php";
+
+use Beepboop\Action\Device\EnsureAction;
+use Carbon\Carbon;
+
+use function Amp\wait;
+use function Beepboop\prepare;
+
+$average = 350;
+$months = 12;
+
+foreach (range(5, 10) as $device) {
+    $ensurePromise = (new EnsureAction)->run([
+        "serial_number" => $device
+    ]);
+
+    wait($ensurePromise);
+
+    $findPromise = prepare("SELECT * FROM devices WHERE serial_number = :serial_number LIMIT 1", [
+        "serial_number" => $device,
+    ]);
+
+    $findRows = wait($findPromise);
+    $findRow = wait($findRows->fetchObject());
+
+    $clearPromise = prepare("DELETE FROM primary_measurements WHERE serial_number = :serial_number", [
+        "serial_number" => $device,
+    ]);
+
+    wait($clearPromise);
+
+    $left = 0;
+
+    for ($i = 0; $i < $months; $i++) {
+        $left += rand($average - ($average / 10), $average + ($average / 10));
+    }
+
+    $date = Carbon::now();
+
+    while ($left > 0) {
+        $insertPromise = prepare("INSERT INTO primary_measurements (`serial_number`, `usage`, `battery_voltage`, `created_at`) VALUES (:serial_number, :usage, :battery_voltage, :created_at)", [
+            "serial_number" => $device,
+            "usage" => $left,
+            "battery_voltage" => rand(10, 20),
+            "created_at" => $date->format("Y-m-d H:i:s"),
+        ]);
+
+        wait($insertPromise);
+
+        $date->subMonth();
+        $usage = rand($average - ($average / 10), $average + ($average / 10));
+        $left = max(0, $left - $usage);
+    }
+}

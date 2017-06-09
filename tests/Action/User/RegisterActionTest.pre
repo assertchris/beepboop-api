@@ -1,0 +1,45 @@
+<?php
+
+namespace Beepboop\Tests\Action\User;
+
+use Beepboop\Tests\InsertsUser;
+use Beepboop\Tests\Test;
+use Beepboop\Action\User\RegisterAction;
+
+use function Beepboop\prepare;
+
+class RegisterActionTest extends Test
+{
+    use InsertsUser;
+
+    private $ignore = [
+        "password",
+        "password_confirmation",
+        "created_at",
+    ];
+
+    /**
+     * @test
+     * @covers Beepboop\Action\User\RegisterAction::run
+     */
+    public function can_register_users()
+    {
+        $this->wait(() => {
+            $added = await RegisterAction->new()->run($this->data);
+
+            if ($added === null) {
+                $this->fail("user not registered");
+            }
+
+            foreach ($this->data as $key => $value) {
+                if (in_array($key, $this->ignore)) {
+                    continue;
+                }
+
+                $this->assertEquals($value, $added->{$key});
+            }
+
+            $this->assertNotNull($added->token);
+        });
+    }
+}

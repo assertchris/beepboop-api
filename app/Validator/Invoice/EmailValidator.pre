@@ -1,0 +1,35 @@
+<?php
+
+namespace Beepboop\Validator\Invoice;
+
+use Beepboop\Validator;
+use Beepboop\Validator\Validates;
+
+use function Beepboop\prepare;
+
+class EmailValidator implements Validator
+{
+    use Validates;
+
+    async public function run($parameters = null)
+    {
+        $errors = <>;
+        $parameters = <$parameters>;
+
+        if ($parameters->id === null) {
+            $errors->id = "Id is required";
+        } else {
+            $invoiceIdResult = await prepare("SELECT * FROM invoices WHERE id = :id AND deleted_at IS NULL LIMIT 1", $parameters);
+
+            if (!await $invoiceIdResult->fetchObject()) {
+                $errors->id = "Invoice not found";
+            }
+        }
+
+        if ($parameters->email === null) {
+            $errors->email = "Email is required";
+        }
+
+        return $errors;
+    }
+}

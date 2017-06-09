@@ -1,0 +1,13 @@
+#!/usr/bin/env php
+<?php
+
+require_once __DIR__ . "/../bootstrap/environment.php";
+
+$host = getenv("DB_HOST");
+$port = getenv("DB_PORT");
+$database = getenv("DB_DATABASE");
+$username = getenv("DB_USERNAME");
+$password = getenv("DB_PASSWORD");
+$time = time();
+
+exec("mysqldump --host={$host} --port={$port} --user={$username} --password={$password} --no-create-info {$database} > database/snapshots/{$time}.sql");

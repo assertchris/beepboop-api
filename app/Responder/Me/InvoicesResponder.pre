@@ -1,0 +1,61 @@
+<?php
+
+namespace Beepboop\Responder\Me;
+
+use Aerys\Request;
+use Aerys\Response;
+use Beepboop\Action\Group\ListAction as GroupListAction;
+use Beepboop\Action\User\ListAction as UserListAction;
+use Beepboop\Action\Me\InvoicesAction;
+use Beepboop\Responder;
+use Beepboop\Responder\Responds;
+
+class InvoicesResponder implements Responder
+{
+    use Responds;
+
+    public function run(Request $request, Response $response, array $arguments = [])
+    {
+        if (await $this->auth($request, $response)) {
+            return;
+        }
+
+        $parameters = $request->getAllParams();
+        $parameters = <$parameters>->merge($arguments);
+
+        $parameters->user = $request->locals["beepboop.user"];
+
+        if (await $this->errors($parameters, $response)) {
+            return;
+        }
+
+        $groups = await GroupListAction->new()->run();
+        $users = await UserListAction->new()->run();
+
+        $invoices = (await InvoicesAction->new()->run($parameters))->map(($invoice) => {
+            unset($invoice->deleted_at);
+
+            $groups->each(($group) => {
+                if ($group->id === $invoice->group_id) {
+                  $invoice->group = $group;
+                }
+            });
+
+            if ($invoice->group !== null) {
+                $users->each(($user) => {
+                    if ($invoice->group->technician_id === $user->id) {
+                      $invoice->group->technician = $user;
+                    }
+
+                    if ($invoice->group->administrator_id === $user->id) {
+                      $invoice->group->administrator = $user;
+                    }
+                });
+            }
+
+            return $invoice;
+        });
+
+        await $this->respond($response, 200, "ok", $invoices);
+    }
+}

@@ -1,0 +1,34 @@
+<?php
+
+namespace Beepboop\Responder\Group;
+
+use Aerys\Request;
+use Aerys\Response;
+use Beepboop\Action\Group\EditAction;
+use Beepboop\Responder;
+use Beepboop\Responder\Responds;
+
+class EditResponder implements Responder
+{
+    use Responds;
+
+    public function run(Request $request, Response $response, array $arguments = [])
+    {
+        if (await $this->auth($request, $response)) {
+            return;
+        }
+
+        $parameters = await $this->parameters($request);
+        $parameters = $parameters->merge($arguments);
+
+        if (await $this->errors($parameters, $response)) {
+            return;
+        }
+
+        $row = await EditAction->new()->run($parameters);
+
+        await $this->respond($response, 200, "ok", $row->without(
+            "deleted_at"
+        ));
+    }
+}

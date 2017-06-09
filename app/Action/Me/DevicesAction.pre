@@ -1,0 +1,45 @@
+<?php
+
+namespace Beepboop\Action\Me;
+
+use Beepboop\Action;
+
+use const Beepboop\USER_SYSTEM_ADMINISTRATOR;
+
+use function Beepboop\prepare;
+
+class DevicesAction implements Action
+{
+    async public function run($parameters = null)
+    {
+        $user = $parameters->user;
+
+        if ($user->type === USER_SYSTEM_ADMINISTRATOR) {
+            $devicesResult = await prepare("SELECT * FROM `devices` WHERE `deleted_at` IS NULL");
+
+            if ($devicesRows = await $devicesResult->fetchObjects()) {
+              return <$devicesRows>;
+            }
+        } else {
+            $groupsResult = await prepare("SELECT * FROM `groups` WHERE (`technician_id` = :technician_id OR `administrator_id` = :administrator_id) AND `deleted_at` IS NULL", <
+                "technician_id" => $user->id,
+                "administrator_id" => $user->id,
+            >);
+
+            $devices = [];
+            $devicesResult = await prepare("SELECT * FROM `devices` WHERE `deleted_at` IS NULL");
+
+            if (($groupsRows = await $groupsResult->fetchObjects()) && ($devicesRows = await $devicesResult->fetchObjects())) {
+                foreach ($groupsRows as $groupsRow) {
+                    foreach ($devicesRows as $devicesRow) {
+                        if ($devicesRow->group_id === $groupsRow->id) {
+                            $devices[] = $devicesRow;
+                        }
+                    }
+                }
+            }
+
+            return <$devices>;
+        }
+    }
+}

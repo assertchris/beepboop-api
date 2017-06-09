@@ -1,0 +1,35 @@
+<?php
+
+namespace Beepboop\Validator\User;
+
+use Beepboop\Validator;
+use Beepboop\Validator\Validates;
+
+use function Beepboop\prepare;
+
+class AddValidator implements Validator
+{
+    use Validates;
+
+    async public function run($parameters = null)
+    {
+        $errors = <>;
+        $parameters = <$parameters>;
+
+        if ($parameters->email === null) {
+          $errors->email = "Email is required";
+        } else {
+            $userEmailResult = await prepare("SELECT * FROM users WHERE email = :email AND deleted_at IS NULL LIMIT 1", $parameters);
+
+            if ($row = await $userEmailResult->fetchObject()) {
+                $errors->email = "Email must be unique";
+            }
+        }
+
+        if ($parameters->type !== null && !is_numeric($parameters->type)) {
+            $errors->type = "Type must be a number";
+        }
+
+        return $errors;
+    }
+}

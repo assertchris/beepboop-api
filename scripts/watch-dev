@@ -1,0 +1,77 @@
+#!/usr/bin/env php
+<?php
+
+require_once __DIR__ . "/../bootstrap/tests.php";
+
+use Symfony\Component\Finder\Finder;
+use Yosymfony\ResourceWatcher\ResourceWatcher;
+use Yosymfony\ResourceWatcher\ResourceCacheFile;
+
+$finder = new Finder();
+
+$finder->files()
+    ->name("*.pre")
+    ->in([
+        __DIR__ . "/../app",
+        __DIR__ . "/../bootstrap",
+        __DIR__ . "/../public",
+    ]);
+
+$cache = new ResourceCacheFile(__DIR__ . "/.dev-changes.php");
+
+$watcher = new ResourceWatcher($cache);
+$watcher->setFinder($finder);
+
+function start($id) {
+    static $build;
+
+    if ($build === null) {
+        $build = 1;
+    }
+
+    exec("PRE_DISABLE_AUTOLOAD=1 vendor/bin/aerys -d -c bootstrap/app.php id={$id} build={$build} > aerys.log 2> aerys.log &");
+
+    $build++;
+}
+
+function identify($id) {
+    exec("ps -ax | grep id={$id}", $lines);
+
+    $parts = explode(" ", $lines[0]);
+    return (int) $parts[0];
+}
+
+function kill($pid) {
+    exec("kill -9 {$pid}");
+}
+
+start("dev_watcher");
+print "Starting server" . PHP_EOL;
+
+while (true) {
+    $watcher->findChanges();
+
+    if ($watcher->hasChanges()) {
+        $resources = array_merge(
+            $watcher->getNewResources(),
+            $watcher->getDeletedResources(),
+            $watcher->getUpdatedResources()
+        );
+
+        foreach ($resources as $resource) {
+            $pre = realpath($resource);
+            $php = preg_replace("/pre$/", "php", $pre);
+
+            print "Rebuilding {$pre}" . PHP_EOL;
+
+            Pre\Plugin\compile($pre, $php, true, true);
+        }
+
+        print "Restarting server" . PHP_EOL;
+
+        kill(identify("dev_watcher"));
+        start("dev_watcher");
+    }
+
+    usleep(100000);
+}

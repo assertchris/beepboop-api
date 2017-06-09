@@ -1,0 +1,41 @@
+<?php
+
+namespace Beepboop\Validator\Device;
+
+use Beepboop\Validator;
+use Beepboop\Validator\Validates;
+
+use function Beepboop\prepare;
+
+class SettingsValidator implements Validator
+{
+    use Validates;
+
+    async public function run($parameters = null)
+    {
+        $errors = <>;
+        $parameters = <$parameters>;
+
+        if ($parameters->id === null) {
+          $errors->id = "Id is required";
+        } else {
+            $deviceIdResult = await prepare("SELECT * FROM devices WHERE id = :id AND deleted_at IS NULL LIMIT 1", $parameters);
+
+            if (!await $deviceIdResult->fetchObject()) {
+                $errors->id = "Device not found";
+            }
+        }
+
+        if ($parameters->secondary_start === null) {
+            $errors->secondary_start = "Secondary start is required";
+        }
+
+        if ($parameters->secondary_duration === null) {
+            $errors->secondary_duration = "Secondary duration is required";
+        } else if (!is_numeric($parameters->secondary_duration)) {
+            $errors->secondary_duration = "Secondary duration must be a number";
+        }
+
+        return $errors;
+    }
+}

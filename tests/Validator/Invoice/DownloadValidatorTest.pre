@@ -1,0 +1,59 @@
+<?php
+
+namespace Beepboop\Tests\Validator\Invoice;
+
+use Beepboop\Tests\InsertsInvoice;
+use Beepboop\Tests\Test;
+use Beepboop\Validator\Invoice\DownloadValidator;
+
+use function Beepboop\prepare;
+
+class DownloadValidatorTest extends Test
+{
+    use InsertsInvoice;
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\Invoice\DownloadValidator::run
+     */
+    public function can_detect_empty_required_fields()
+    {
+        $this->wait(() => {
+            $result = await DownloadValidator->new()->run();
+
+            $this->assertEquals("Id is required", $result->id);
+        });
+    }
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\Invoice\DownloadValidator::run
+     */
+    public function can_detect_invalid_id()
+    {
+        $this->wait(() => {
+            $result = await DownloadValidator->new()->run(<
+                "id" => 123
+            >);
+
+            $this->assertEquals("Invoice not found", $result->id);
+        });
+    }
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\Invoice\DownloadValidator::run
+     */
+    public function can_detect_valid_id()
+    {
+        $this->wait(() => {
+            $invoice = await $this->insertInvoice();
+
+            $result = await DownloadValidator->new()->run(<
+                "id" => $invoice->id,
+            >);
+
+            $this->assertEquals(0, $result->length());
+        });
+    }
+}

@@ -1,0 +1,31 @@
+<?php
+
+namespace Beepboop\Validator\Group;
+
+use Beepboop\Validator;
+use Beepboop\Validator\Validates;
+
+use function Beepboop\prepare;
+
+class DeleteValidator implements Validator
+{
+    use Validates;
+
+    async public function run($parameters = null)
+    {
+        $errors = <>;
+        $parameters = <$parameters>;
+
+        if ($parameters->id === null) {
+          $errors->id = "Id is required";
+        } else {
+            $groupIdResult = await prepare("SELECT * FROM groups WHERE id = :id AND deleted_at IS NULL LIMIT 1", $parameters);
+
+            if (!await $groupIdResult->fetchObject()) {
+                $errors->id = "Group not found";
+            }
+        }
+
+        return $errors;
+    }
+}

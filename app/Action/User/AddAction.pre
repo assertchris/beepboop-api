@@ -1,0 +1,37 @@
+<?php
+
+namespace Beepboop\Action\User;
+
+use Beepboop\Action;
+
+use function Beepboop\prepare;
+
+class AddAction implements Action
+{
+    async public function run($parameters = null)
+    {
+        $parameters = <$parameters>;
+
+        $values = <
+            "name" => $parameters->name,
+            "address" => $parameters->address,
+            "phone" => $parameters->phone,
+            "email" => $parameters->email,
+            "type" => $parameters->type,
+            "created_at" => date("Y-m-d H:i:s"),
+        >;
+
+        $results = await prepare(
+            "INSERT INTO users (`name`, `address`, `phone`, `email`, `type`, `created_at`) VALUES (:name, :address, :phone, :email, :type, :created_at)", $values
+        );
+
+        $results = await prepare(
+            "SELECT * FROM `users` WHERE `id` = :id LIMIT 1",
+            <"id" => $results->insertId>
+        );
+
+        if ($row = await $results->fetchObject()) {
+            return <$row>;
+        }
+    }
+}

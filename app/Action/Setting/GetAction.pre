@@ -1,0 +1,24 @@
+<?php
+
+namespace Beepboop\Action\Setting;
+
+use Beepboop\Action;
+
+use function Beepboop\prepare;
+
+class GetAction implements Action
+{
+    async public function run($parameters = null)
+    {
+        $parameters = <$parameters>;
+
+        $results = await prepare(
+            "SELECT * FROM `settings` WHERE `name` = :name ORDER BY `created_at` DESC LIMIT 1",
+            <"name" => $parameters->name>
+        );
+
+        if ($row = await $results->fetchObject()) {
+            return $row->value;
+        }
+    }
+}

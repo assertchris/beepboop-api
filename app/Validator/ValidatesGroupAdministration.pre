@@ -1,0 +1,56 @@
+<?php
+
+namespace Beepboop\Validator;
+
+use const Beepboop\USER_GROUP_ADMINISTRATOR;
+use const Beepboop\USER_SYSTEM_ADMINISTRATOR;
+use const Beepboop\USER_TECHNICIAN;
+
+use function Beepboop\prepare;
+
+trait ValidatesGroupAdministration
+{
+    async private function preventAdministratorForGroup($userType, $userId, $groupId)
+    {
+        if ($userType === USER_SYSTEM_ADMINISTRATOR) {
+            return false;
+        }
+
+        if ($userType !== USER_GROUP_ADMINISTRATOR) {
+            return true;
+        }
+
+        $groupResult = await prepare("SELECT * FROM groups WHERE id = :group_id AND administrator_id = :administrator_id AND deleted_at IS NULL LIMIT 1", <
+            "group_id" => $groupId,
+            "administrator_id" => $userId,
+        >);
+
+        if ($group = await $groupResult->fetchObject()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    async private function preventTechnicianForGroup($userType, $userId, $groupId)
+    {
+        if ($userType === USER_SYSTEM_ADMINISTRATOR) {
+            return false;
+        }
+
+        if ($userType !== USER_TECHNICIAN) {
+            return true;
+        }
+
+        $groupResult = await prepare("SELECT * FROM groups WHERE id = :group_id AND technician_id = :technician_id AND deleted_at IS NULL LIMIT 1", <
+            "group_id" => $groupId,
+            "technician_id" => $userId,
+        >);
+
+        if ($group = await $groupResult->fetchObject()) {
+            return false;
+        }
+
+        return true;
+    }
+}

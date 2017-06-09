@@ -1,0 +1,18 @@
+#!/usr/bin/env php
+<?php
+
+require_once __DIR__ . "/../bootstrap/environment.php";
+
+$host = getenv("DB_HOST");
+$port = getenv("DB_PORT");
+$database = getenv("DB_DATABASE");
+$username = getenv("DB_USERNAME");
+$password = getenv("DB_PASSWORD");
+
+$files = glob(__DIR__ . "/../database/snapshots/*.sql");
+
+sort($files);
+
+$last = array_pop($files);
+
+exec("mysql --force --host={$host} --port={$port} --user={$username} --password={$password} {$database} < {$last}");

@@ -1,0 +1,25 @@
+<?php
+
+namespace Beepboop\Action\Invoice;
+
+use Amp\Process;
+use Beepboop\Action;
+
+use function Beepboop\prepare;
+
+class EmailAction implements Action
+{
+    async public function run($parameters = null)
+    {
+        $parameters = <$parameters>;
+
+        $token = base64_encode($parameters->user->token);
+        $email = base64_encode($parameters->email);
+        $id = $parameters->id;
+
+        $process = new Process(BASE_PATH . "/scripts/email-invoice {$token} {$email} {$id}");
+        $result = await $process->exec(Process::BUFFER_ALL);
+
+        return $result;
+    }
+}

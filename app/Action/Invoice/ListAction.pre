@@ -1,0 +1,23 @@
+<?php
+
+namespace Beepboop\Action\Invoice;
+
+use Beepboop\Action;
+
+use function Beepboop\prepare;
+
+class ListAction implements Action
+{
+    async public function run($parameters = null)
+    {
+        $results = await prepare(
+            "SELECT * FROM `invoices` WHERE `deleted_at` IS NULL"
+        );
+
+        if ($rows = await $results->fetchObjects()) {
+            return <$rows>;
+        }
+
+        return <>;
+    }
+}

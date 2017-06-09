@@ -1,0 +1,24 @@
+<?php
+
+namespace Beepboop\Action\Group;
+
+use Beepboop\Action;
+
+use function Beepboop\prepare;
+
+class DeleteAction implements Action
+{
+    async public function run($parameters = null)
+    {
+      $parameters = <$parameters>;
+
+      $values = <
+          "id" => $parameters->id,
+          "deleted_at" => date("Y-m-d H:i:s"),
+      >;
+
+      await prepare(
+          "UPDATE `groups` SET `deleted_at` = :deleted_at WHERE `id` = :id LIMIT 1", $values
+      );
+    }
+}

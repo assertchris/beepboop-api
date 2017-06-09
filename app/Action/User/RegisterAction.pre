@@ -1,0 +1,39 @@
+<?php
+
+namespace Beepboop\Action\User;
+
+use Beepboop\Action;
+
+use function Beepboop\hash;
+use function Beepboop\prepare;
+
+class RegisterAction implements Action
+{
+    async public function run($parameters = null)
+    {
+        $parameters = <$parameters>;
+
+        $values = <
+            "name" => $parameters->name,
+            "address" => $parameters->address,
+            "phone" => $parameters->phone,
+            "email" => $parameters->email,
+            "password" => hash($parameters->password),
+            "token" => hash($parameters->email . time()),
+            "created_at" => date("Y-m-d H:i:s"),
+        >;
+
+        $insertResult = await prepare(
+            "INSERT INTO `users` (`name`, `address`, `phone`, `email`, `password`, `token`, `created_at`) VALUES (:name, :address, :phone, :email, :password, :token, :created_at)", $values
+        );
+
+        $selectResult = await prepare(
+            "SELECT * FROM `users` WHERE `id` = :id LIMIT 1",
+            <"id" => $insertResult->insertId>
+        );
+
+        if ($row = await $selectResult->fetchObject()) {
+            return <$row>;
+        }
+    }
+}

@@ -1,0 +1,46 @@
+<?php
+
+namespace Beepboop\Tests\Action\Group;
+
+use Beepboop\Tests\InsertsGroup;
+use Beepboop\Tests\Test;
+use Beepboop\Action\Group\ViewAction;
+
+use function Beepboop\hash;
+use function Beepboop\prepare;
+
+class ViewActionTest extends Test
+{
+    use InsertsGroup;
+
+    private $ignore = [
+        "created_at",
+    ];
+
+    /**
+     * @test
+     * @covers Beepboop\Action\Group\ViewAction::run
+     */
+    public function can_view_users()
+    {
+        $this->wait(() => {
+            $added = await $this->insertGroup();
+
+            $found = await ViewAction->new()->run(<
+                "id" => $added->id,
+            >);
+
+            if ($found === null) {
+                $this->fail("group not found");
+            }
+
+            foreach ($this->data as $key => $value) {
+                if (in_array($key, $this->ignore)) {
+                    continue;
+                }
+
+                $this->assertEquals($value, $found->{$key});
+            }
+        });
+    }
+}

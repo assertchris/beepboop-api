@@ -1,0 +1,33 @@
+<?php
+
+namespace Beepboop\Responder\Device;
+
+use Aerys\Request;
+use Aerys\Response;
+use Beepboop\Action\Device\EnsureAction;
+use Beepboop\Responder;
+use Beepboop\Responder\Responds;
+
+class EnsureResponder implements Responder
+{
+    use Responds;
+
+    public function run(Request $request, Response $response, array $arguments = [])
+    {
+        if (await $this->auth($request, $response)) {
+            return;
+        }
+
+        $parameters = await $this->parameters($request);
+
+        if (await $this->errors($parameters, $response)) {
+            return;
+        }
+
+        $row = await EnsureAction->new()->run($parameters);
+
+        await $this->respond($response, 200, "ok", $row->without(
+            "deleted_at"
+        ));
+    }
+}

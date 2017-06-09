@@ -1,0 +1,63 @@
+<?php
+
+namespace Beepboop;
+
+use Amp\Mysql\Connection;
+use Exception;
+
+const USER_CUSTOMER = 1;
+const USER_GROUP_ADMINISTRATOR = 3;
+const USER_SYSTEM_ADMINISTRATOR = 4;
+const USER_TECHNICIAN = 2;
+
+async function connect()
+{
+    $host = getenv("DB_HOST");
+    $port = getenv("DB_PORT");
+    $database = getenv("DB_DATABASE");
+    $username = getenv("DB_USERNAME");
+    $password = getenv("DB_PASSWORD");
+
+    $connection = new Connection(
+        "host={$host}:{$port};user={$username};pass={$password}"
+    );
+
+    await $connection->connect();
+    await $connection->useDb($database);
+
+    return $connection;
+}
+
+async function prepare(string $query, $data = [])
+{
+    if (is_object($data)) {
+        $data = $data->toArray();
+    }
+
+    $connection = await connect();
+    $results = await $connection->prepare($query, $data);
+
+    return $results;
+}
+
+function hash($plain, $cost = 10)
+{
+    $hash = password_hash($plain, PASSWORD_BCRYPT, [
+        "cost" => $cost,
+    ]);
+
+    if (empty($hash)) {
+        throw new Exception("Bcrypt hashing not supported.");
+    }
+
+    return $hash;
+}
+
+function verify($plain, $hash)
+{
+    if (empty($hash)) {
+        return false;
+    }
+
+    return password_verify($plain, $hash);
+}

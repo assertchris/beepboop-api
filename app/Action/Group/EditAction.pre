@@ -1,0 +1,36 @@
+<?php
+
+namespace Beepboop\Action\Group;
+
+use Beepboop\Action;
+
+use function Beepboop\prepare;
+
+class EditAction implements Action
+{
+    async public function run($parameters = null)
+    {
+        $parameters = <$parameters>;
+
+        $values = <
+            "id" => $parameters->id,
+            "name" => $parameters->name,
+            "technician_id" => $parameters->technician_id,
+            "administrator_id" => $parameters->administrator_id,
+            "updated_at" => date("Y-m-d H:i:s"),
+        >;
+
+        $results = await prepare(
+            "UPDATE `groups` SET `name` = :name, `technician_id` = :technician_id, `administrator_id` = :administrator_id, `updated_at` = :updated_at WHERE `id` = :id LIMIT 1", $values
+        );
+
+        $results = await prepare(
+            "SELECT * FROM `groups` WHERE `id` = :id LIMIT 1",
+            <"id" => $parameters->id>
+        );
+
+        if ($row = await $results->fetchObject()) {
+            return <$row>;
+        }
+    }
+}

@@ -1,0 +1,31 @@
+<?php
+
+namespace Beepboop\Validator\Device;
+
+use Beepboop\Validator;
+use Beepboop\Validator\Validates;
+
+use function Beepboop\prepare;
+
+class MeasurementsValidator implements Validator
+{
+    use Validates;
+
+    async public function run($parameters = null)
+    {
+        $errors = <>;
+        $parameters = <$parameters>;
+
+        if ($parameters->id === null) {
+          $errors->id = "Id is required";
+        } else {
+            $userIdResult = await prepare("SELECT * FROM devices WHERE id = :id AND deleted_at IS NULL LIMIT 1", $parameters);
+
+            if (!await $userIdResult->fetchObject()) {
+                $errors->id = "Device not found";
+            }
+        }
+
+        return $errors;
+    }
+}

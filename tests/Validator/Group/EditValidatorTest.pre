@@ -1,0 +1,78 @@
+<?php
+
+namespace Beepboop\Tests\Validator\Group;
+
+use Beepboop\Tests\InsertsGroup;
+use Beepboop\Tests\Test;
+use Beepboop\Validator\Group\EditValidator;
+
+use function Beepboop\prepare;
+
+class EditValidatorTest extends Test
+{
+    use InsertsGroup;
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\Group\EditValidator::run
+     */
+    public function can_detect_empty_required_fields()
+    {
+        $this->wait(() => {
+            $result = await EditValidator->new()->run();
+
+            $this->assertEquals("Id is required", $result->id);
+            $this->assertEquals("Name is required", $result->name);
+        });
+    }
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\Group\EditValidator::run
+     */
+    public function can_detect_invalid_id()
+    {
+        $this->wait(() => {
+            $result = await EditValidator->new()->run(<
+                "id" => 123
+            >);
+
+            $this->assertEquals("Group not found", $result->id);
+        });
+    }
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\Group\EditValidator::run
+     */
+    public function can_detect_duplicate_names()
+    {
+        $this->wait(() => {
+            $user = await $this->insertGroup();
+
+            $result = await EditValidator->new()->run(<
+                "id" => 123,
+                "name" => "test",
+            >);
+
+            $this->assertEquals("Name must be unique", $result->name);
+        });
+    }
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\Group\EditValidator::run
+     */
+    public function can_detect_valid_id()
+    {
+        $this->wait(() => {
+            $user = await $this->insertGroup();
+
+            $result = await EditValidator->new()->run(<
+                "id" => $user->id,
+            >);
+
+            $this->assertNull($result->id);
+        });
+    }
+}

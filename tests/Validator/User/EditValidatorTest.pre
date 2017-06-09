@@ -1,0 +1,93 @@
+<?php
+
+namespace Beepboop\Tests\Validator\User;
+
+use Beepboop\Tests\InsertsUser;
+use Beepboop\Tests\Test;
+use Beepboop\Validator\User\EditValidator;
+
+use function Beepboop\prepare;
+
+class EditValidatorTest extends Test
+{
+    use InsertsUser;
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\User\EditValidator::run
+     */
+    public function can_detect_empty_required_fields()
+    {
+        $this->wait(() => {
+            $result = await EditValidator->new()->run();
+
+            $this->assertEquals("Id is required", $result->id);
+            $this->assertEquals("Email is required", $result->email);
+        });
+    }
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\User\EditValidator::run
+     */
+    public function can_detect_non_numeric_type()
+    {
+        $this->wait(() => {
+            $result = await EditValidator->new()->run(<
+                "type" => "foo",
+            >);
+
+            $this->assertEquals("Type must be a number", $result->type);
+        });
+    }
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\User\EditValidator::run
+     */
+    public function can_detect_invalid_id()
+    {
+        $this->wait(() => {
+            $result = await EditValidator->new()->run(<
+                "id" => 123
+            >);
+
+            $this->assertEquals("User not found", $result->id);
+        });
+    }
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\User\EditValidator::run
+     */
+    public function can_detect_duplicate_emails()
+    {
+        $this->wait(() => {
+            $user = await $this->insertUser();
+
+            $result = await EditValidator->new()->run(<
+                "id" => 123,
+                "email" => "test@test.test",
+            >);
+
+            $this->assertEquals("Email must be unique", $result->email);
+        });
+    }
+
+    /**
+     * @test
+     * @covers Beepboop\Validator\User\EditValidator::run
+     */
+    public function can_detect_valid_id()
+    {
+        $this->wait(() => {
+            $user = await $this->insertUser();
+
+            $result = await EditValidator->new()->run(<
+                "id" => $user->id,
+            >);
+
+            $this->assertNull($result->id);
+        });
+    }
+}

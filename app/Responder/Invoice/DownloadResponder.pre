@@ -1,0 +1,41 @@
+<?php
+
+namespace Beepboop\Responder\Invoice;
+
+use Aerys\Request;
+use Aerys\Response;
+use Beepboop\Action\Invoice\GenerateAction;
+use Beepboop\Responder;
+use Beepboop\Responder\Responds;
+
+use function Amp\File\get;
+
+class DownloadResponder implements Responder
+{
+    use Responds;
+
+    public function run(Request $request, Response $response, array $arguments = [])
+    {
+        $parameters = $request->getAllParams();
+        $parameters = <$parameters>->merge($arguments);
+
+        if (await $this->authToken($parameters->token[0], $request, $response)) {
+            return;
+        }
+
+        if (await $this->errors($parameters, $response)) {
+            return;
+        }
+
+        $pdf = await GenerateAction->new()->run($parameters);
+
+        $response
+            ->setHeader("Access-Control-Allow-Origin", "*")
+            ->setHeader("Access-Control-Allow-Headers", "x-token")
+            ->setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+            ->setHeader("Content-Disposition", "attachment;filename='invoice.pdf'")
+            ->setHeader("Content-type", "application/pdf")
+            ->setStatus(200)
+            ->end($pdf);
+    }
+}
